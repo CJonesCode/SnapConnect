@@ -1,5 +1,5 @@
 {
-  "name": "snapconnect",
+  "name": "themarketindex",
   "main": "expo-router/entry",
   "version": "1.0.0",
   "scripts": {
@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
+    "@hookform/resolvers": "^5.1.1",
     "@react-navigation/native": "^7.1.6",
     "expo": "~53.0.12",
     "expo-camera": "~16.1.8",
@@ -23,6 +24,7 @@
     "expo-media-library": "~17.1.7",
     "expo-notifications": "~0.31.3",
     "expo-router": "~5.1.0",
+    "expo-secure-store": "~14.2.3",
     "expo-splash-screen": "~0.30.9",
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.9",
@@ -41,7 +43,6 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
     "@typescript-eslint/eslint-plugin": "^8.35.0",
     "@typescript-eslint/parser": "^8.35.0",
