@@ -3,17 +3,18 @@
  * It receives the photo's URI and displays it, offering options
  * to discard or proceed with the snap.
  */
-import { View, Image, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, Image, TouchableOpacity, Text, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSnap } from '@/services/firebase/snapService';
+import { useTheme } from '@/hooks/useTheme';
 
 export default function PhotoPreviewModal() {
   const router = useRouter();
   const { user } = useAuth();
   const { uri } = useLocalSearchParams<{ uri: string }>();
+  const { colors } = useTheme();
 
   if (!uri) {
     // Should not happen if navigation is set up correctly
@@ -44,60 +45,24 @@ export default function PhotoPreviewModal() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Image source={{ uri }} style={styles.previewImage} />
+    <SafeAreaView className="flex-1 bg-background dark:bg-dark-background">
+      <Image source={{ uri }} className="flex-1" resizeMode="contain" />
 
-      <View style={styles.topControls}>
+      <View className="absolute top-16 left-5 right-5 flex-row justify-start">
         <TouchableOpacity onPress={handleDiscard}>
-          <MaterialIcons name="close" size={40} color="white" />
+          <MaterialIcons name="close" size={40} color={colors.text} />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.bottomControls}>
-        <TouchableOpacity style={styles.sendButton} onPress={handleSend}>
-          <Text style={styles.sendButtonText}>Send</Text>
-          <MaterialIcons name="send" size={24} color="black" style={{ marginLeft: 8 }} />
+      <View className="absolute bottom-12 left-0 right-0 items-center">
+        <TouchableOpacity
+          className="flex-row items-center bg-accent dark:bg-dark-accent px-8 py-4 rounded-full"
+          onPress={handleSend}
+        >
+          <Text className="text-lg font-bold text-white">Send</Text>
+          <MaterialIcons name="send" size={24} color={'white'} style={{ marginLeft: 8 }} />
         </TouchableOpacity>
     </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: 'black',
-  },
-  previewImage: {
-    flex: 1,
-    resizeMode: 'contain',
-  },
-  topControls: {
-    position: 'absolute',
-    top: 60,
-    left: 20,
-    right: 20,
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-  },
-  bottomControls: {
-    position: 'absolute',
-    bottom: 50,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  sendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'white',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 30,
-  },
-  sendButtonText: {
-    color: 'black',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-});

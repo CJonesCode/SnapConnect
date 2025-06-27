@@ -1,4 +1,4 @@
-import { View, Text, FlatList, StyleSheet, Image, Pressable } from 'react-native';
+import { View, Text, FlatList, Image, Pressable } from 'react-native';
 import { Link } from 'expo-router';
 import { useState, useEffect } from 'react';
 
@@ -45,7 +45,7 @@ export default function ChatScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1 bg-background dark:bg-dark-background">
       <FlatList
         data={tips}
         keyExtractor={(item) => item.id}
@@ -57,17 +57,22 @@ export default function ChatScreen() {
             }}
             asChild>
             <Pressable onPress={() => handleTipPress(item.id)}>
-              <View style={styles.tipItem}>
-                <Image source={{ uri: item.mediaUrl }} style={styles.tipImage} />
-                <View style={styles.tipInfo}>
-                  <View style={styles.tipHeader}>
-                    <Text style={styles.tipFrom}>{item.from}</Text>
-                    <Text style={styles.tipTicker}>${item.ticker}</Text>
+              <View className="flex-row p-4 border-b border-border dark:border-dark-border items-center">
+                <Image source={{ uri: item.mediaUrl }} className="w-12 h-12 rounded-full mr-4" />
+                <View className="flex-1 justify-center">
+                  <View className="flex-row justify-between mb-1">
+                    <Text className="text-base font-bold text-text dark:text-dark-text">{item.from}</Text>
+                    <Text className="text-base font-bold text-accent dark:text-dark-accent">${item.ticker}</Text>
                   </View>
-                  <Text style={styles.tipText} numberOfLines={1}>
+                  <Text className="text-sm text-text dark:text-dark-text my-1" numberOfLines={1}>
                     {item.tip}
                   </Text>
-                  <Text style={item.viewed ? styles.tipStatusViewed : styles.tipStatusNew}>
+                  <Text
+                    className={`text-sm ${
+                      item.viewed
+                        ? 'text-gray-500 dark:text-gray-400'
+                        : 'text-text dark:text-dark-text font-bold'
+                    }`}>
                     {item.viewed ? 'Viewed' : 'New Tip'}
                   </Text>
                 </View>
@@ -78,57 +83,4 @@ export default function ChatScreen() {
       />
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  tipItem: {
-    flexDirection: 'row',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    alignItems: 'center',
-  },
-  tipImage: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 16,
-  },
-  tipInfo: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  tipHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  tipFrom: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  tipTicker: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  tipText: {
-    fontSize: 14,
-    color: '#333',
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  tipStatusNew: {
-    fontSize: 14,
-    color: '#000',
-    fontWeight: 'bold',
-  },
-  tipStatusViewed: {
-    fontSize: 14,
-    color: '#888',
-  },
-}); 
+} 

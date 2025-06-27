@@ -120,7 +120,6 @@ export function useAuth() {
       logger.error('Sign in failed.', { email, error: e?.code });
       setError(friendlyError);
       setLoading(false);
-      throw e;
     }
   };
 

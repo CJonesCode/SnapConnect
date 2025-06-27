@@ -1,14 +1,16 @@
-import React, { useState, useCallback } from 'react';
-import { StyleSheet, TextInput, FlatList, Button, View as RNView } from 'react-native';
-import { Text, View } from '@/components/Themed';
+import React, { useState } from 'react';
+import { Button, View, Text, Pressable, ActivityIndicator, FlatList } from 'react-native';
 import { searchUsers, UserProfile } from '@/services/firebase/userService';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from '@/hooks/useTheme';
+import { StyledTextInput } from '@/components/primitives/StyledTextInput';
 
 export default function FriendsScreen() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const { colors } = useTheme();
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -29,19 +31,23 @@ export default function FriendsScreen() {
   };
 
   const renderUserItem = ({ item }: { item: UserProfile }) => (
-    <View style={styles.userItem}>
-      <Text>{item.displayName}</Text>
-      {/* Add Friend button will be implemented next */}
-      <Button title="Add" onPress={() => console.log('Adding friend:', item.displayName)} />
+    <View className="flex-row justify-between items-center p-4 border-b border-separator dark:border-dark-separator">
+      <Text className="text-lg text-text dark:text-dark-text">{item.displayName}</Text>
+      <Pressable
+        className="bg-accent dark:bg-dark-accent py-2 px-4 rounded-lg"
+        onPress={() => console.log('Adding friend:', item.displayName)}
+      >
+        <Text className="text-white font-bold">Add</Text>
+      </Pressable>
     </View>
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Find Friends</Text>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchBar}
+    <View className="flex-1 items-center p-5 bg-background dark:bg-dark-background">
+      <Text className="text-2xl font-bold mb-5 text-text dark:text-dark-text">Find Friends</Text>
+      <View className="flex-row items-center w-full mb-5">
+        <StyledTextInput
+          className="flex-1 mr-2"
           placeholder="Search by username..."
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -49,54 +55,17 @@ export default function FriendsScreen() {
           returnKeyType="search"
           onSubmitEditing={handleSearch}
         />
-        <Button title={isLoading ? 'Searching...' : 'Search'} onPress={handleSearch} disabled={isLoading} />
+        <Button title="Search" onPress={handleSearch} disabled={isLoading} color={colors.accent} />
       </View>
+
+      {isLoading && <ActivityIndicator size="large" className="my-4" color={colors.accent} />}
 
       <FlatList
         data={searchResults}
         renderItem={renderUserItem}
         keyExtractor={(item) => item.uid}
-        style={styles.resultsList}
+        className="w-full"
       />
     </View>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 20,
-  },
-  searchBar: {
-    flex: 1,
-    height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginRight: 10,
-  },
-  resultsList: {
-    width: '100%',
-  },
-  userItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-  },
-}); 
+} 

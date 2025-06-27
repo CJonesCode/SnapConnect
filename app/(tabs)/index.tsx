@@ -3,7 +3,7 @@
  * It uses `expo-camera` to request permissions and display a real-time camera preview.
  */
 import { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -29,10 +29,10 @@ export default function CameraScreen() {
 
   if (!permission.granted) {
     return (
-      <View style={styles.container}>
-        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.button}>
-          <Text style={styles.text}>Grant permission</Text>
+      <View className="flex-1 justify-center items-center p-5 bg-background dark:bg-dark-background">
+        <Text className="text-center text-lg text-text dark:text-dark-text">We need your permission to show the camera</Text>
+        <TouchableOpacity onPress={requestPermission} className="mt-5 bg-accent dark:bg-dark-accent p-3 rounded-lg">
+          <Text className="text-white font-bold">Grant permission</Text>
         </TouchableOpacity>
       </View>
     );
@@ -53,60 +53,17 @@ export default function CameraScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef} />
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.flipButton} onPress={toggleCameraFacing}>
+    <View className="flex-1 justify-center">
+      <CameraView className="flex-1" facing={facing} ref={cameraRef} />
+      <View className="absolute bottom-0 left-0 right-0 flex-row bg-transparent justify-center items-end mb-16">
+        <TouchableOpacity className="absolute right-8 bottom-2" onPress={toggleCameraFacing}>
           <MaterialIcons name="flip-camera-ios" size={34} color="white" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.captureButton} onPress={takePicture} />
+        <TouchableOpacity
+          className="w-20 h-20 rounded-full border-4 border-white bg-transparent"
+          onPress={takePicture}
+        />
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  camera: {
-    flex: 1,
-  },
-  buttonContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'flex-end',
-    marginBottom: 64,
-  },
-  flipButton: {
-    position: 'absolute',
-    right: 30,
-    bottom: 10,
-  },
-  captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'transparent',
-    borderColor: 'white',
-    borderWidth: 4,
-  },
-  text: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: 'white',
-  },
-  button: {
-    // Basic styling for a grant permission button
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: '#007AFF', // Example blue
-    borderRadius: 5,
-  },
-});

@@ -1,6 +1,6 @@
 import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider, useTheme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -8,7 +8,8 @@ import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/services/logging/logger';
-
+import { SplashScreen as CustomSplashScreen } from '@/components/SplashScreen';
+import { View } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export {
@@ -26,34 +27,35 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { colors } = useTheme();
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // This effect will now run only when the auth state is resolved or truly changes.
-    if (isLoading) {
-      return; // Wait until the auth state is resolved.
+    if (!isLoading) {
+      // Hide the splash screen now that we have an auth state.
+      SplashScreen.hideAsync();
+      const targetRoute = user ? '/(tabs)' : '/(auth)';
+      logger.info('Auth state resolved, navigating.', { targetRoute });
+      router.replace(targetRoute);
     }
-
-    const targetRoute = user ? '/(tabs)' : '/(auth)';
-    logger.info('Auth state changed, navigating.', { targetRoute });
-    router.replace(targetRoute);
-
   }, [user, isLoading, router]);
 
   if (isLoading) {
-    // While determining auth state, show nothing to keep the splash screen visible.
-    return null;
+    // While determining auth state, show our custom splash screen.
+    return <CustomSplashScreen />;
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <View style={{ flex: 1, backgroundColor: colors.background }} className={colorScheme}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+        </Stack>
+      </ThemeProvider>
+    </View>
   );
 }
 
@@ -68,14 +70,9 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
-    return null;
+    // Also show the splash screen while fonts are loading.
+    return <CustomSplashScreen />;
   }
 
   return <RootLayoutNav />;

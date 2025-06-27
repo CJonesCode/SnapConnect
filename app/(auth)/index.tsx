@@ -4,12 +4,13 @@
  * using react-hook-form for form management and Zod for validation.
  */
 import { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, TouchableOpacity, Text, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Text as ThemedText, View as ThemedView } from '@/components/Themed';
 import { useAuth } from '@/hooks/useAuth';
+import { StyledTextInput } from '@/components/primitives/StyledTextInput';
+import { StyledButton } from '@/components/primitives/StyledButton';
 
 export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -58,20 +59,23 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={{ flex: 1 }}
     >
-      <ThemedView className="flex-1 justify-center items-center p-6 bg-gray-100 dark:bg-gray-900">
-        <ThemedText className="text-3xl font-bold mb-8 text-gray-900 dark:text-white">
+      <View className="flex-1 justify-center items-center p-6 bg-background dark:bg-dark-background">
+        <Image
+          source={require('../../assets/images/logo.png')}
+          className="w-32 h-32 mb-6"
+          style={{ resizeMode: 'contain' }}
+        />
+        <Text className="text-3xl font-bold mb-8 text-text dark:text-dark-text">
           {isSignUp ? 'Create Account' : 'Welcome Back'}
-        </ThemedText>
+        </Text>
 
         <View className="w-full">
           <Controller
             control={control}
             name="email"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                className="w-full px-4 py-3 mb-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
+              <StyledTextInput
                 placeholder="Email"
-                placeholderTextColor="#9CA3AF"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -80,16 +84,14 @@ export default function LoginScreen() {
               />
             )}
           />
-          {errors.email && <Text className="text-red-500 mb-4">{errors.email.message}</Text>}
+          {errors.email && <Text className="text-destructive dark:text-dark-destructive mb-4">{errors.email.message}</Text>}
 
           <Controller
             control={control}
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
-              <TextInput
-                className="w-full px-4 py-3 mb-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
+              <StyledTextInput
                 placeholder="Password"
-                placeholderTextColor="#9CA3AF"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
@@ -97,17 +99,15 @@ export default function LoginScreen() {
               />
             )}
           />
-          {errors.password && <Text className="text-red-500 mb-4">{errors.password.message}</Text>}
+          {errors.password && <Text className="text-destructive dark:text-dark-destructive mb-4">{errors.password.message}</Text>}
 
           {isSignUp && (
             <Controller
               control={control}
               name="confirmPassword"
               render={({ field: { onChange, onBlur, value } }) => (
-                <TextInput
-                  className="w-full px-4 py-3 mb-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white"
+                <StyledTextInput
                   placeholder="Confirm Password"
-                  placeholderTextColor="#9CA3AF"
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
@@ -116,25 +116,23 @@ export default function LoginScreen() {
               )}
             />
           )}
-          {errors.confirmPassword && <Text className="text-red-500 mb-4">{errors.confirmPassword.message}</Text>}
+          {errors.confirmPassword && <Text className="text-destructive dark:text-dark-destructive mb-4">{errors.confirmPassword.message}</Text>}
 
-          {authError && <Text className="text-red-500 mb-4">{authError}</Text>}
+          {authError && <Text className="text-destructive dark:text-dark-destructive mb-4">{authError}</Text>}
         </View>
 
-        <TouchableOpacity
-          className="w-full bg-blue-600 py-3 rounded-lg items-center"
+        <StyledButton
+          title={isSignUp ? 'Sign Up' : 'Login'}
           onPress={handleSubmit(onSubmit)}
-          disabled={isLoading}
-        >
-          {isLoading ? <ActivityIndicator color="#fff" /> : <Text className="text-white font-bold text-lg">{isSignUp ? 'Sign Up' : 'Login'}</Text>}
-        </TouchableOpacity>
+          isLoading={isLoading}
+        />
 
         <TouchableOpacity onPress={toggleFormType} className="mt-6">
-          <Text className="text-blue-600 dark:text-blue-400">
+          <Text className="text-accent dark:text-dark-accent">
             {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
           </Text>
         </TouchableOpacity>
-      </ThemedView>
+      </View>
     </KeyboardAvoidingView>
   );
 } 

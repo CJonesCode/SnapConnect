@@ -1,18 +1,24 @@
 // app.config.js
 import '@expo/env';
+const tailwind = require('./tailwind.config.js');
+
+const a = tailwind.theme.extend.colors;
 
 export default {
   name: "TheMarketIndex",
   slug: "TheMarketIndex",
   version: "1.0.0",
   orientation: "portrait",
-  icon: "./assets/images/icon.png",
+  icon: "./assets/images/logo.png",
   scheme: "themarketindex",
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "dark",
   splash: {
-    image: "./assets/images/splash-icon.png",
+    image: "./assets/images/logo.png",
     resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    backgroundColor: a.background,
+    dark: {
+      backgroundColor: a.dark.background,
+    },
   },
   ios: {
     supportsTablet: true,
@@ -21,16 +27,11 @@ export default {
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/images/adaptive-icon.png",
-      backgroundColor: "#ffffff",
+      foregroundImage: "./assets/images/logo.png",
+      backgroundColor: a.dark.background,
     },
     package: "com.anonymous.themarketindex",
     googleServicesFile: "./google-services.json"
-  },
-  web: {
-    bundler: "metro",
-    output: "static",
-    favicon: "./assets/images/favicon.png",
   },
   plugins: [
     "expo-router",
