@@ -4,17 +4,17 @@
  * using react-hook-form for form management and Zod for validation.
  */
 import { useState } from 'react';
-import { View, TouchableOpacity, Text, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, KeyboardAvoidingView, Platform, Image, StyleSheet, Pressable } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
-import { StyledTextInput } from '@/components/primitives/StyledTextInput';
-import { StyledButton } from '@/components/primitives/StyledButton';
+import { TextInput, Button, Text, useTheme, HelperText } from 'react-native-paper';
 
 export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
   const { signIn, signUp, isLoading, error: authError, setError } = useAuth();
+  const theme = useTheme();
 
   // Unified Zod schema
   const formSchema = z.object({
@@ -57,82 +57,133 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1 }}
+      style={styles.keyboardAvoidingView}
     >
-      <View className="flex-1 justify-center items-center p-6 bg-background dark:bg-dark-background">
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Image
           source={require('../../assets/images/logo.png')}
-          className="w-32 h-32 mb-6"
-          style={{ resizeMode: 'contain' }}
+          style={styles.logo}
         />
-        <Text className="text-3xl font-bold mb-8 text-text dark:text-dark-text">
+        <Text variant="headlineMedium" style={styles.title}>
           {isSignUp ? 'Create Account' : 'Welcome Back'}
         </Text>
 
-        <View className="w-full">
+        <View style={styles.formContainer}>
           <Controller
             control={control}
             name="email"
             render={({ field: { onChange, onBlur, value } }) => (
-              <StyledTextInput
-                placeholder="Email"
+              <TextInput
+                label="Email"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                error={!!errors.email}
+                style={styles.input}
               />
             )}
           />
-          {errors.email && <Text className="text-destructive dark:text-dark-destructive mb-4">{errors.email.message}</Text>}
+          <HelperText type="error" visible={!!errors.email}>
+            {errors.email?.message}
+          </HelperText>
 
           <Controller
             control={control}
             name="password"
             render={({ field: { onChange, onBlur, value } }) => (
-              <StyledTextInput
-                placeholder="Password"
+              <TextInput
+                label="Password"
                 onBlur={onBlur}
                 onChangeText={onChange}
                 value={value}
                 secureTextEntry
+                error={!!errors.password}
+                style={styles.input}
               />
             )}
           />
-          {errors.password && <Text className="text-destructive dark:text-dark-destructive mb-4">{errors.password.message}</Text>}
+          <HelperText type="error" visible={!!errors.password}>
+            {errors.password?.message}
+          </HelperText>
 
           {isSignUp && (
             <Controller
               control={control}
               name="confirmPassword"
               render={({ field: { onChange, onBlur, value } }) => (
-                <StyledTextInput
-                  placeholder="Confirm Password"
+                <TextInput
+                  label="Confirm Password"
                   onBlur={onBlur}
                   onChangeText={onChange}
                   value={value}
                   secureTextEntry
+                  error={!!errors.confirmPassword}
+                  style={styles.input}
                 />
               )}
             />
           )}
-          {errors.confirmPassword && <Text className="text-destructive dark:text-dark-destructive mb-4">{errors.confirmPassword.message}</Text>}
+          <HelperText type="error" visible={!!errors.confirmPassword}>
+            {errors.confirmPassword?.message}
+          </HelperText>
 
-          {authError && <Text className="text-destructive dark:text-dark-destructive mb-4">{authError}</Text>}
+          <HelperText type="error" visible={!!authError}>
+            {authError}
+          </HelperText>
         </View>
 
-        <StyledButton
-          title={isSignUp ? 'Sign Up' : 'Login'}
+        <Button
+          mode="contained"
           onPress={handleSubmit(onSubmit)}
-          isLoading={isLoading}
-        />
+          loading={isLoading}
+          style={styles.button}
+        >
+          {isSignUp ? 'Sign Up' : 'Login'}
+        </Button>
 
-        <TouchableOpacity onPress={toggleFormType} className="mt-6">
-          <Text className="text-accent dark:text-dark-accent">
+        <Pressable onPress={toggleFormType} style={styles.toggleButton}>
+          <Text style={{ color: theme.colors.primary }}>
             {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
           </Text>
-        </TouchableOpacity>
+        </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  logo: {
+    width: 128,
+    height: 128,
+    marginBottom: 24,
+    resizeMode: 'contain',
+  },
+  title: {
+    marginBottom: 32,
+  },
+  formContainer: {
+    width: '100%',
+  },
+  input: {
+    backgroundColor: 'transparent',
+  },
+  button: {
+    width: '100%',
+    marginTop: 8,
+    paddingVertical: 4,
+  },
+  toggleButton: {
+    marginTop: 24,
+  },
+}); 

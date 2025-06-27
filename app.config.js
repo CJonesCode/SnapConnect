@@ -1,8 +1,5 @@
 // app.config.js
 import '@expo/env';
-const tailwind = require('./tailwind.config.js');
-
-const a = tailwind.theme.extend.colors;
 
 export default {
   name: "TheMarketIndex",
@@ -11,13 +8,13 @@ export default {
   orientation: "portrait",
   icon: "./assets/images/logo.png",
   scheme: "themarketindex",
-  userInterfaceStyle: "dark",
+  userInterfaceStyle: "automatic",
   splash: {
     image: "./assets/images/logo.png",
     resizeMode: "contain",
-    backgroundColor: a.background,
+    backgroundColor: "#ffffff",
     dark: {
-      backgroundColor: a.dark.background,
+      backgroundColor: "#121212",
     },
   },
   ios: {
@@ -28,7 +25,7 @@ export default {
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/logo.png",
-      backgroundColor: a.dark.background,
+      backgroundColor: "#121212",
     },
     package: "com.anonymous.themarketindex",
     googleServicesFile: "./google-services.json"
@@ -36,7 +33,23 @@ export default {
   plugins: [
     "expo-router",
     "expo-notifications",
-    "expo-secure-store"
+    "expo-secure-store",
+    [
+      "expo-camera",
+      {
+        "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take photos.",
+        "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for video recording.",
+        "recordAudioAndroid": true
+      }
+    ],
+    [
+      "expo-build-properties",
+      {
+        "android": {
+          "minSdkVersion": 23
+        }
+      }
+    ]
   ],
   experiments: {
     typedRoutes: true

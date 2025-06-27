@@ -1,6 +1,4 @@
-import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider, useTheme } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -9,8 +7,7 @@ import 'react-native-reanimated';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/services/logging/logger';
 import { SplashScreen as CustomSplashScreen } from '@/components/SplashScreen';
-import { View } from 'react-native';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { PaperProvider } from 'react-native-paper';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -26,8 +23,6 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-  const { colors } = useTheme();
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -47,15 +42,13 @@ function RootLayoutNav() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }} className={colorScheme}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
-      </ThemeProvider>
-    </View>
+    <PaperProvider>
+      <Stack>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+      </Stack>
+    </PaperProvider>
   );
 }
 

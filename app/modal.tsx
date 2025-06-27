@@ -3,18 +3,17 @@
  * It receives the photo's URI and displays it, offering options
  * to discard or proceed with the snap.
  */
-import { View, Image, TouchableOpacity, Text, SafeAreaView } from 'react-native';
+import { View, Image, StyleSheet, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSnap } from '@/services/firebase/snapService';
-import { useTheme } from '@/hooks/useTheme';
+import { Button, IconButton, useTheme } from 'react-native-paper';
 
 export default function PhotoPreviewModal() {
   const router = useRouter();
   const { user } = useAuth();
   const { uri } = useLocalSearchParams<{ uri: string }>();
-  const { colors } = useTheme();
+  const theme = useTheme();
 
   if (!uri) {
     // Should not happen if navigation is set up correctly
@@ -45,24 +44,53 @@ export default function PhotoPreviewModal() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-background dark:bg-dark-background">
-      <Image source={{ uri }} className="flex-1" resizeMode="contain" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Image source={{ uri }} style={styles.image} resizeMode="contain" />
 
-      <View className="absolute top-16 left-5 right-5 flex-row justify-start">
-        <TouchableOpacity onPress={handleDiscard}>
-          <MaterialIcons name="close" size={40} color={colors.text} />
-        </TouchableOpacity>
-      </View>
+      <IconButton
+        icon="close"
+        size={30}
+        onPress={handleDiscard}
+        style={styles.closeButton}
+        iconColor={theme.colors.onBackground}
+      />
 
-      <View className="absolute bottom-12 left-0 right-0 items-center">
-        <TouchableOpacity
-          className="flex-row items-center bg-accent dark:bg-dark-accent px-8 py-4 rounded-full"
+      <View style={styles.sendButtonContainer}>
+        <Button
+          mode="contained"
           onPress={handleSend}
+          icon="send"
+          style={styles.sendButton}
         >
-          <Text className="text-lg font-bold text-white">Send</Text>
-          <MaterialIcons name="send" size={24} color={'white'} style={{ marginLeft: 8 }} />
-        </TouchableOpacity>
-    </View>
+          Send
+        </Button>
+      </View>
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  image: {
+    flex: 1,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    left: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  sendButtonContainer: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
+  sendButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+});

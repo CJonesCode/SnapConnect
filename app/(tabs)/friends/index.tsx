@@ -1,16 +1,15 @@
 import React, { useState } from 'react';
-import { Button, View, Text, Pressable, ActivityIndicator, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList } from 'react-native';
 import { searchUsers, UserProfile } from '@/services/firebase/userService';
 import { useAuth } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
-import { StyledTextInput } from '@/components/primitives/StyledTextInput';
+import { TextInput, Button, Text, ActivityIndicator, List, useTheme } from 'react-native-paper';
 
 export default function FriendsScreen() {
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const { colors } = useTheme();
+  const theme = useTheme();
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -20,34 +19,31 @@ export default function FriendsScreen() {
     setIsLoading(true);
     try {
       const results = await searchUsers(searchQuery);
-      // Filter out the current user from search results
       setSearchResults(results.filter((u) => u.uid !== user?.uid));
     } catch (error) {
       console.error(error);
-      // Optionally, show an error message to the user
     } finally {
       setIsLoading(false);
     }
   };
 
   const renderUserItem = ({ item }: { item: UserProfile }) => (
-    <View className="flex-row justify-between items-center p-4 border-b border-separator dark:border-dark-separator">
-      <Text className="text-lg text-text dark:text-dark-text">{item.displayName}</Text>
-      <Pressable
-        className="bg-accent dark:bg-dark-accent py-2 px-4 rounded-lg"
-        onPress={() => console.log('Adding friend:', item.displayName)}
-      >
-        <Text className="text-white font-bold">Add</Text>
-      </Pressable>
-    </View>
+    <List.Item
+      title={item.displayName}
+      right={() => (
+        <Button mode="contained-tonal" onPress={() => console.log('Adding friend:', item.displayName)}>
+          Add
+        </Button>
+      )}
+    />
   );
 
   return (
-    <View className="flex-1 items-center p-5 bg-background dark:bg-dark-background">
-      <Text className="text-2xl font-bold mb-5 text-text dark:text-dark-text">Find Friends</Text>
-      <View className="flex-row items-center w-full mb-5">
-        <StyledTextInput
-          className="flex-1 mr-2"
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Text variant="headlineLarge" style={styles.title}>Find Friends</Text>
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.input}
           placeholder="Search by username..."
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -55,17 +51,55 @@ export default function FriendsScreen() {
           returnKeyType="search"
           onSubmitEditing={handleSearch}
         />
-        <Button title="Search" onPress={handleSearch} disabled={isLoading} color={colors.accent} />
+        <Button
+          mode="contained"
+          onPress={handleSearch}
+          disabled={isLoading}
+          style={styles.searchButton}
+        >
+          Search
+        </Button>
       </View>
 
-      {isLoading && <ActivityIndicator size="large" className="my-4" color={colors.accent} />}
+      {isLoading && <ActivityIndicator size="large" style={styles.loader} />}
 
       <FlatList
         data={searchResults}
         renderItem={renderUserItem}
         keyExtractor={(item) => item.uid}
-        className="w-full"
+        style={styles.list}
       />
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  input: {
+    flex: 1,
+    marginRight: 10,
+    backgroundColor: 'transparent',
+  },
+  searchButton: {
+    height: 54, // Match TextInput height
+    justifyContent: 'center',
+  },
+  loader: {
+    marginVertical: 16,
+  },
+  list: {
+    width: '100%',
+  },
+}); 

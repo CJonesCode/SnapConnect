@@ -2,7 +2,7 @@ import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
 import { Pressable } from 'react-native';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from 'react-native-paper';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -13,13 +13,22 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const { colors } = useTheme();
+  const theme = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: colors.tint,
-        // The header is now shown by default, and we've removed web support.
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurface,
+        tabBarStyle: {
+          backgroundColor: theme.colors.elevation.level2,
+        },
+        headerStyle: {
+          backgroundColor: theme.colors.elevation.level2,
+        },
+        headerTitleStyle: {
+          color: theme.colors.onSurface,
+        },
       }}>
       <Tabs.Screen
         name="index"
@@ -33,7 +42,7 @@ export default function TabLayout() {
                   <FontAwesome
                     name="info-circle"
                     size={25}
-                    color={colors.text}
+                    color={theme.colors.onSurface}
                     style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
                   />
                 )}

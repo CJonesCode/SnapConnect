@@ -5,48 +5,81 @@
  * actions such as signing out. It serves as the main hub for user-specific
  * settings and management.
  */
-import { Text, View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Button, Text, Divider, useTheme } from 'react-native-paper';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserStore } from '@/hooks/useUserStore';
 import { logger } from '@/services/logging/logger';
-import { StyledButton } from '@/components/primitives/StyledButton';
-import { StyledText } from '@/components/primitives/StyledText';
-import { Separator } from '@/components/primitives/Separator';
 
 export default function ProfileScreen() {
   const { signOut } = useAuth();
   const { profile } = useUserStore();
+  const { colors } = useTheme();
 
   async function handleSignOut() {
     try {
       await signOut();
       logger.info('User initiated sign-out complete.');
-      // The auth listener will handle navigation automatically.
     } catch (error) {
       logger.error('Failed to sign out from profile screen.', { error });
-      // Optionally, show an alert to the user.
     }
   }
 
   return (
-    <View className="flex-1 items-center justify-start p-5 pt-12 bg-background dark:bg-dark-background">
-      <Text className="text-2xl font-bold mb-5 text-text dark:text-dark-text">Profile</Text>
-      <Separator />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Text variant="headlineLarge" style={styles.title}>
+        Profile
+      </Text>
+      <Divider style={styles.divider} />
 
       {profile && (
-        <View className="w-full mb-8">
-          <StyledText variant="muted" className="text-base font-bold mt-2">Display Name:</StyledText>
-          <StyledText className="text-lg mb-2">{profile.displayName || 'Not set'}</StyledText>
-          <StyledText variant="muted" className="text-base font-bold mt-2">Email:</StyledText>
-          <StyledText className="text-lg mb-2">{profile.email}</StyledText>
+        <View style={styles.profileSection}>
+          <Text variant="labelLarge" style={styles.label}>Display Name:</Text>
+          <Text variant="bodyLarge" style={styles.value}>{profile.displayName || 'Not set'}</Text>
+          <Text variant="labelLarge" style={styles.label}>Email:</Text>
+          <Text variant="bodyLarge" style={styles.value}>{profile.email}</Text>
         </View>
       )}
 
-      <StyledButton
-        variant="destructive"
-        title="Sign Out"
+      <Button
+        mode="contained"
         onPress={handleSignOut}
-      />
+        buttonColor={colors.error}
+        style={styles.button}
+      >
+        Sign Out
+      </Button>
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    padding: 20,
+    paddingTop: 48,
+  },
+  title: {
+    marginBottom: 20,
+  },
+  divider: {
+    width: '100%',
+    marginVertical: 20,
+  },
+  profileSection: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  label: {
+    marginTop: 8,
+    fontWeight: 'bold',
+  },
+  value: {
+    marginBottom: 8,
+  },
+  button: {
+    width: '100%',
+  },
+}); 

@@ -1,6 +1,7 @@
-import { View, Text, FlatList, Image, Pressable } from 'react-native';
+import { View, FlatList, StyleSheet } from 'react-native';
 import { Link } from 'expo-router';
 import { useState, useEffect } from 'react';
+import { Card, Text, Avatar, useTheme } from 'react-native-paper';
 
 const initialMockTips = [
   {
@@ -27,6 +28,7 @@ const initialMockTips = [
 
 export default function ChatScreen() {
   const [tips, setTips] = useState(initialMockTips);
+  const theme = useTheme();
 
   useEffect(() => {
     const now = new Date();
@@ -44,43 +46,55 @@ export default function ChatScreen() {
     );
   };
 
+  const renderItem = ({ item }: { item: (typeof initialMockTips)[0] }) => {
+    const isViewed = item.viewed || new Date(item.expiresAt) <= new Date();
+    return (
+      <Link
+        href={{
+          pathname: './tip',
+          params: { ...item, viewed: item.viewed.toString() },
+        }}
+        asChild
+      >
+        <Card style={styles.card} onPress={() => handleTipPress(item.id)}>
+          <Card.Title
+            title={item.from}
+            subtitle={item.tip}
+            titleVariant="titleMedium"
+            subtitleNumberOfLines={1}
+            left={(props) => <Avatar.Image {...props} source={{ uri: item.mediaUrl }} />}
+            right={(props) => <Text {...props} variant="bodyLarge" style={{ color: theme.colors.primary, marginRight: 16 }}>${item.ticker}</Text>}
+          />
+          <Card.Content>
+            <Text style={{ color: isViewed ? theme.colors.outline : theme.colors.onSurface, fontWeight: isViewed ? 'normal' : 'bold' }}>
+              {isViewed ? 'Viewed' : 'New Tip'}
+            </Text>
+          </Card.Content>
+        </Card>
+      </Link>
+    );
+  };
+
   return (
-    <View className="flex-1 bg-background dark:bg-dark-background">
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <FlatList
         data={tips}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <Link
-            href={{
-              pathname: './tip',
-              params: { ...item, viewed: item.viewed.toString() },
-            }}
-            asChild>
-            <Pressable onPress={() => handleTipPress(item.id)}>
-              <View className="flex-row p-4 border-b border-border dark:border-dark-border items-center">
-                <Image source={{ uri: item.mediaUrl }} className="w-12 h-12 rounded-full mr-4" />
-                <View className="flex-1 justify-center">
-                  <View className="flex-row justify-between mb-1">
-                    <Text className="text-base font-bold text-text dark:text-dark-text">{item.from}</Text>
-                    <Text className="text-base font-bold text-accent dark:text-dark-accent">${item.ticker}</Text>
-                  </View>
-                  <Text className="text-sm text-text dark:text-dark-text my-1" numberOfLines={1}>
-                    {item.tip}
-                  </Text>
-                  <Text
-                    className={`text-sm ${
-                      item.viewed
-                        ? 'text-gray-500 dark:text-gray-400'
-                        : 'text-text dark:text-dark-text font-bold'
-                    }`}>
-                    {item.viewed ? 'Viewed' : 'New Tip'}
-                  </Text>
-                </View>
-              </View>
-            </Pressable>
-          </Link>
-        )}
+        renderItem={renderItem}
+        contentContainerStyle={styles.listContent}
       />
     </View>
   );
-} 
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 8,
+  },
+  card: {
+    marginVertical: 4,
+  },
+}); 
