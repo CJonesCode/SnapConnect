@@ -16,12 +16,16 @@ export default {
   },
   ios: {
     supportsTablet: true,
+    googleServicesFile: "./GoogleService-Info.plist",
+    bundleIdentifier: "com.anonymous.themarketindex"
   },
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/images/adaptive-icon.png",
       backgroundColor: "#ffffff",
     },
+    package: "com.anonymous.themarketindex",
+    googleServicesFile: "./google-services.json"
   },
   web: {
     bundler: "metro",

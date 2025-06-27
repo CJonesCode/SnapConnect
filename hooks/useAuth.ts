@@ -1,9 +1,9 @@
 /**
  * This hook provides authentication state and actions for the entire app.
  * It uses Zustand for state management and Firebase for authentication.
- * User session is persisted using Expo's SecureStore.
+ * The onAuthStateChanged listener is set up once at the module level to
+ * prevent re-renders and ensure a single source of truth for auth state.
  */
-import { useEffect, useState } from 'react';
 import { create } from 'zustand';
 import {
   onAuthStateChanged,
@@ -16,162 +16,127 @@ import { doc, setDoc } from 'firebase/firestore';
 import * as SecureStore from 'expo-secure-store';
 import { auth, db } from '../services/firebase/firebaseConfig';
 import { useUserStore } from './useUserStore';
+import { logger } from '@/services/logging/logger';
 
-// --- TEMPORARY BYPASS ---
-// This flag skips the Firebase connection for UI development.
-// Set this to `false` once you have added your Firebase credentials.
-const BYPASS_FIREBASE_AUTH = true;
-// --- END TEMPORARY BYPASS ---
+// --- Helper function for user-friendly error messages ---
+function getFriendlyAuthError(error: any): string {
+  if (!error || !error.code) {
+    return 'An unexpected error occurred. Please try again.';
+  }
+  switch (error.code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Invalid email or password. Please try again.';
+    case 'auth/email-already-in-use':
+      return 'An account with this email address already exists.';
+    case 'auth/weak-password':
+      return 'Password is too weak. Please use at least 6 characters.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    default:
+      return 'An unexpected error occurred. Please try again.';
+  }
+}
 
 const USER_SESSION_KEY = 'userSession';
 
 type AuthState = {
   user: User | null;
   isLoading: boolean;
-  error: Error | null;
-  setUser: (user: User | null) => void;
-  setLoading: (isLoading: boolean) => void;
-  setError: (error: Error | null) => void;
+  error: string | null;
 };
 
-const useAuthStore = create<AuthState>((set) => ({
+const useAuthStore = create<AuthState>(() => ({
   user: null,
-  isLoading: true,
+  isLoading: true, // Start in a loading state until the first auth check completes.
   error: null,
-  setUser: (user) => set({ user }),
-  setLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
 }));
 
+// --- Initialize Auth Listener (Runs once on app startup) ---
+logger.info('Setting up global onAuthStateChanged listener...');
+onAuthStateChanged(auth, async (firebaseUser) => {
+  const { fetchProfile, clearProfile } = useUserStore.getState();
+
+  if (firebaseUser) {
+    await SecureStore.setItemAsync(USER_SESSION_KEY, JSON.stringify(firebaseUser));
+    await fetchProfile(firebaseUser.uid);
+    useAuthStore.setState({ user: firebaseUser, isLoading: false, error: null });
+    logger.info('Auth state updated: User is authenticated.', { uid: firebaseUser.uid });
+  } else {
+    await SecureStore.deleteItemAsync(USER_SESSION_KEY);
+    clearProfile();
+    useAuthStore.setState({ user: null, isLoading: false, error: null });
+    logger.info('Auth state updated: User is not authenticated.');
+  }
+});
+
+// --- Main Auth Hook ---
 export function useAuth() {
-  const { user, isLoading, error, setUser, setLoading, setError } = useAuthStore();
-  const [isInitialized, setIsInitialized] = useState(false);
-  const { fetchProfile, clearProfile } = useUserStore();
+  const { user, isLoading, error } = useAuthStore();
 
-  useEffect(() => {
-    // --- TEMPORARY BYPASS LOGIC ---
-    if (BYPASS_FIREBASE_AUTH) {
-      setLoading(false);
-      setIsInitialized(true);
-      setUser(null);
-      return;
-    }
-    // --- END TEMPORARY BYPASS LOGIC ---
-
-    const checkStoredSession = async () => {
-      try {
-        const storedUser = await SecureStore.getItemAsync(USER_SESSION_KEY);
-        if (storedUser) {
-          setUser(JSON.parse(storedUser));
-        }
-      } catch (e) {
-        console.error('Failed to load user session from secure store.', e);
-        setError(e as Error);
-      } finally {
-        setLoading(false);
-        setIsInitialized(true);
-      }
-    };
-
-    checkStoredSession();
-
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        setUser(firebaseUser);
-        await SecureStore.setItemAsync(USER_SESSION_KEY, JSON.stringify(firebaseUser));
-        await fetchProfile(firebaseUser.uid);
-      } else {
-        setUser(null);
-        await SecureStore.deleteItemAsync(USER_SESSION_KEY);
-        clearProfile();
-      }
-      if (isInitialized) {
-        setLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [setUser, setLoading, setError, isInitialized, fetchProfile, clearProfile]);
+  const setLoading = (loading: boolean) => useAuthStore.setState({ isLoading: loading });
+  const setError = (authError: string | null) => useAuthStore.setState({ error: authError });
 
   const signUp = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
+    logger.info('Attempting to sign up user.', { email });
     try {
-      // --- TEMPORARY BYPASS LOGIC ---
-      if (BYPASS_FIREBASE_AUTH) {
-        console.log('BYPASS: Signing up with', { email, password });
-        console.log('BYPASS: Would create user document in Firestore here.');
-        // To see the UI flow, we'll simulate a successful sign-up by setting a mock user.
-        // In a real scenario, the onAuthStateChanged listener would handle this.
-        setUser({ uid: 'mock-user-id', email } as any);
-        return;
-      }
-      // --- END TEMPORARY BYPASS LOGIC ---
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-
-      // Create a user document in Firestore
+      logger.info('Sign up successful.', { uid: userCredential.user.uid });
+      // The onAuthStateChanged listener will handle setting the user state.
       if (userCredential.user) {
         const userRef = doc(db, 'users', userCredential.user.uid);
         await setDoc(userRef, {
           uid: userCredential.user.uid,
           email: userCredential.user.email,
-          displayName: '', // Can be set later from a profile screen
-          photoURL: '', // Can be set later
+          displayName: '',
+          photoURL: '',
           friends: [],
         });
       }
-
       return userCredential;
-    } catch (e) {
-      setError(e as Error);
-      throw e;
-    } finally {
+    } catch (e: any) {
+      const friendlyError = getFriendlyAuthError(e);
+      logger.error('Sign up failed.', { email, error: e?.code });
+      setError(friendlyError);
       setLoading(false);
+      throw e;
     }
   };
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
+    logger.info('Attempting to sign in user.', { email });
     try {
-      // --- TEMPORARY BYPASS LOGIC ---
-      if (BYPASS_FIREBASE_AUTH) {
-        console.log('BYPASS: Signing in with', { email, password });
-        // Simulate a successful sign-in by setting a mock user.
-        setUser({ uid: 'mock-user-id', email } as any);
-        return;
-      }
-      // --- END TEMPORARY BYPASS LOGIC ---
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      logger.info('Sign in successful.', { uid: userCredential.user.uid });
+      // The onAuthStateChanged listener will handle setting the user state.
       return userCredential;
-    } catch (e) {
-      setError(e as Error);
-      throw e;
-    } finally {
+    } catch (e: any) {
+      const friendlyError = getFriendlyAuthError(e);
+      logger.error('Sign in failed.', { email, error: e?.code });
+      setError(friendlyError);
       setLoading(false);
+      throw e;
     }
   };
 
   const signOut = async () => {
-    setLoading(true);
-    setError(null);
+    const uid = useAuthStore.getState().user?.uid;
+    logger.info('Attempting to sign out user.', { uid });
+    // Setting loading state here is optional as onAuthStateChanged will manage it.
     try {
-      // --- TEMPORARY BYPASS LOGIC ---
-      if (BYPASS_FIREBASE_AUTH) {
-        console.log('BYPASS: Signing out');
-        setUser(null);
-        clearProfile();
-        return;
-      }
-      // --- END TEMPORARY BYPASS LOGIC ---
       await firebaseSignOut(auth);
-    } catch (e) {
-      setError(e as Error);
-      throw e;
-    } finally {
-      setLoading(false);
+      logger.info('Sign out successful.', { uid });
+    } catch (e: any) {
+      const friendlyError = getFriendlyAuthError(e);
+      logger.error('Sign out failed.', { uid, error: e?.code });
+      setError(friendlyError);
     }
   };
 
-  return { user, isLoading: isLoading || !isInitialized, error, signUp, signIn, signOut };
+  return { user, isLoading, error, signUp, signIn, signOut, setError };
 } 

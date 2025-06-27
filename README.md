@@ -22,6 +22,7 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
 - **Friend Management**: Users can search for other users by name.
 - **Tip Viewing**: A chat-style list of incoming tips from other users.
 - **Ephemeral Logic**: Tips are marked as viewed and filtered from the list if they are expired.
+- **Centralized Logging**: A structured logging service is in place to monitor authentication and navigation events.
 
 ### Planned
 - **Full Friend Management**: Implement friend requests (add/accept), and display a friends list.
@@ -35,8 +36,7 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
 
 - Node.js (LTS version recommended)
 - Git
-- Genymotion (with VirtualBox)
-- Android Studio (for Android SDK tools)
+- An iOS simulator (via Xcode on macOS) or an Android emulator (via Android Studio).
 
 ### Installation
 
@@ -58,17 +58,20 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
       ```
     - Open the newly created `.env` file and fill in the values with your Firebase project's configuration. You can find these credentials in your [Firebase project console](https://console.firebase.google.com/).
 
+4.  **Set up Firebase configuration files:**
+    - In the root of the project, you will find `google-services.json.example` and `GoogleService-Info.plist.example`.
+    - You need to download your own `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS) from your Firebase project settings.
+    - Rename the example files to `.bak` or remove them, and place your own downloaded files in the root of the project. These files are required for the native Firebase SDKs to connect to your project.
+
 ### Running the Application
 
 1.  **Start the development server:**
     ```bash
     npm start
     ```
-    This will start the Metro bundler and open the Expo DevTools in your browser.
 
 2.  **Open the app:**
-    - **On a physical device:** Install the **Expo Go** app from the App Store or Google Play. Scan the QR code shown in the terminal or browser to open the project.
-    - **On an Android Emulator:** Press `a` in the terminal where the server is running. (Requires Android Studio and a configured Android Virtual Device).
-    - **On an iOS Simulator:** Press `i` in the terminal where the server is running. (Requires Xcode on macOS).
+    - **On an Android Emulator:** With the emulator running, press `a` in the terminal where the server is running.
+    - **On an iOS Simulator:** With the simulator running, press `i` in the terminal where the server is running.
 
 This will install the Expo Go app on your Genymotion device and run TheMarketIndex. 

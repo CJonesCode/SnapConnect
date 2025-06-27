@@ -10,6 +10,8 @@ expo-env.d.ts
 dist/
 build/
 web-build/
+android/
+ios/
 
 # Native
 .kotlin/
@@ -26,6 +28,8 @@ web-build/
 # Firebase
 firebase-debug.log
 .firebaserc
+google-services.json
+GoogleService-Info.plist
 
 # Logs
 npm-debug.log*

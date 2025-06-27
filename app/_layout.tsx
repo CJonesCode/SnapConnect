@@ -2,10 +2,12 @@ import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/services/logging/logger';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -24,11 +26,31 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    // This effect will now run only when the auth state is resolved or truly changes.
+    if (isLoading) {
+      return; // Wait until the auth state is resolved.
+    }
+
+    const targetRoute = user ? '/(tabs)' : '/(auth)';
+    logger.info('Auth state changed, navigating.', { targetRoute });
+    router.replace(targetRoute);
+
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    // While determining auth state, show nothing to keep the splash screen visible.
+    return null;
+  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
     </ThemeProvider>

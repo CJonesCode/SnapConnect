@@ -13,7 +13,7 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
-  const { signIn, signUp, isLoading, error: authError } = useAuth();
+  const { signIn, signUp, isLoading, error: authError, setError } = useAuth();
 
   // Unified Zod schema
   const formSchema = z.object({
@@ -48,6 +48,7 @@ export default function LoginScreen() {
   };
 
   const toggleFormType = () => {
+    setError(null); // Clear previous auth errors
     setIsSignUp(prev => !prev);
     reset();
   };
@@ -117,7 +118,7 @@ export default function LoginScreen() {
           )}
           {errors.confirmPassword && <Text className="text-red-500 mb-4">{errors.confirmPassword.message}</Text>}
 
-          {authError && <Text className="text-red-500 mb-4">{authError.message}</Text>}
+          {authError && <Text className="text-red-500 mb-4">{authError}</Text>}
         </View>
 
         <TouchableOpacity
