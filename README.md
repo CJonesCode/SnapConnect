@@ -15,14 +15,16 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
 
 ## Features
 
-### Implemented (with Mock Data)
+### Implemented
+- **Firebase Integration**: Core services for auth, storage, and database are connected.
+- **Snap Sending**: Users can send photo snaps, which are uploaded to Firebase.
 - **Camera Interface**: Capture photos for use in tips.
+- **Friend Management**: Users can search for other users by name.
 - **Tip Viewing**: A chat-style list of incoming tips from other users.
 - **Ephemeral Logic**: Tips are marked as viewed and filtered from the list if they are expired.
 
 ### Planned
-- **Full Firebase Integration**: Real-time sending, receiving, and storage of tips.
-- **Friend Management**: Ability to search, add, and manage friends.
+- **Full Friend Management**: Implement friend requests (add/accept), and display a friends list.
 - **Story System**: Post 24-hour ephemeral stories visible to friends.
 - **Group Chats**: Create and participate in group discussions.
 - **Push Notifications**: Real-time alerts for new tips and messages.
