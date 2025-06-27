@@ -36,11 +36,9 @@ yarn-error.log*
 yarn-error.*
 
 # Environment secrets
-.env
+# Ignore all local environment files, but not the example
 .env*
-.env*.local
-.env.production
-.env.development
+!/.env.example
 
 # IDEs
 .vscode/

@@ -1,4 +1,6 @@
 // app.config.js
+import '@expo/env';
+
 export default {
   name: "TheMarketIndex",
   slug: "TheMarketIndex",
