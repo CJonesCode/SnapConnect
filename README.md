@@ -51,17 +51,40 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
     npm install
     ```
 
-3.  **Set up environment variables:**
-    - Create a copy of the example environment file:
-      ```bash
-      cp .env.example .env
-      ```
-    - Open the newly created `.env` file and fill in the values with your Firebase project's configuration. You can find these credentials in your [Firebase project console](https://console.firebase.google.com/).
+3.  **Set up Environment Variables & Firebase Configuration:**
 
-4.  **Set up Firebase configuration files:**
-    - In the root of the project, you will find `google-services.json.example` and `GoogleService-Info.plist.example`.
-    - You need to download your own `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS) from your Firebase project settings.
-    - Rename the example files to `.bak` or remove them, and place your own downloaded files in the root of the project. These files are required for the native Firebase SDKs to connect to your project.
+    This project uses both a `.env` file for web/Expo Go development and native configuration files (`google-services.json` and `GoogleService-Info.plist`) for native builds.
+
+    - **Create the `.env` file:**
+      - Copy the example file:
+        ```bash
+        cp .env.example .env
+        ```
+      - Open the new `.env` file and populate it with your Firebase project's web app credentials. You can find these in your **Firebase project settings > General > Your apps > Web app**.
+
+        ```
+        EXPO_PUBLIC_FIREBASE_API_KEY=""
+        EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=""
+        EXPO_PUBLIC_FIREBASE_PROJECT_ID=""
+        EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=""
+        EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=""
+        EXPO_PUBLIC_FIREBASE_IOS_APP_ID=""
+        EXPO_PUBLIC_FIREBASE_ANDROID_APP_ID=""
+        EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=""
+        ```
+
+    - **Download Native Firebase Configuration:**
+      - Make sure you have the [Firebase CLI](https://firebase.google.com/docs/cli) installed and are logged in (`firebase login`).
+      - Run the following commands to download the native configuration files. Replace `<app-id>` with your actual Firebase App ID for iOS and Android respectively.
+
+        *For iOS:*
+        ```bash
+        firebase apps:sdkconfig -i <app-id> -o GoogleService-Info.plist
+        ```
+        *For Android:*
+        ```bash
+        firebase apps:sdkconfig -a <app-id> -o google-services.json
+        ```
 
 ### Running the Application
 
