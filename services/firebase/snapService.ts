@@ -6,11 +6,6 @@ import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { addDoc, collection } from 'firebase/firestore';
 import { db, storage } from './firebaseConfig';
 
-// --- TEMPORARY BYPASS ---
-// This flag skips the Firebase connection for UI development.
-const BYPASS_FIREBASE = true;
-// --- END TEMPORARY BYPASS ---
-
 /**
  * Represents the structure of a Snap document in Firestore.
  */
@@ -45,15 +40,6 @@ async function uploadMedia(uri: string, path: string): Promise<string> {
  * @param recipientId - The UID of the user receiving the snap.
  */
 export async function sendSnap(localUri: string, senderId: string, recipientId: string): Promise<void> {
-  if (BYPASS_FIREBASE) {
-    console.log('--- SNAP SERVICE BYPASS ---');
-    console.log(`From: ${senderId}`);
-    console.log(`To: ${recipientId}`);
-    console.log(`Media URI: ${localUri}`);
-    console.log('--- WOULD UPLOAD AND CREATE DOCUMENT ---');
-    return;
-  }
-
   try {
     // 1. Upload media to Firebase Storage
     const uploadPath = `snaps/${senderId}/${Date.now()}`;

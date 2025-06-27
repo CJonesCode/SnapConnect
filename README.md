@@ -49,27 +49,24 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
     npm install
     ```
 
-### Running with Genymotion
-
-To run the application on a Genymotion emulator, you need to ensure both Expo and Genymotion use the same Android SDK.
-
-1.  **Configure Android SDK**:
-    - Open Android Studio and go to `Settings` > `Languages & Frameworks` > `Android SDK`.
-    - Note the **Android SDK Location**. You will need this path.
-
-2.  **Configure Genymotion**:
-    - Open Genymotion and go to `Settings` > `ADB`.
-    - Select "Use custom Android SDK tools".
-    - Set the SDK path to the **Android SDK Location** you noted from Android Studio.
-
-3.  **Start the Emulator**:
-    - In Genymotion, start your desired virtual device.
-
-4.  **Run the App**:
-    - In your project's root directory, start the Expo development server:
+3.  **Set up environment variables:**
+    - Create a copy of the example environment file:
       ```bash
-      npm start
+      cp .env.example .env
       ```
-    - In the terminal where the server is running, press `a` to open the app on your running Android emulator.
+    - Open the newly created `.env` file and fill in the values with your Firebase project's configuration. You can find these credentials in your [Firebase project console](https://console.firebase.google.com/).
+
+### Running the Application
+
+1.  **Start the development server:**
+    ```bash
+    npm start
+    ```
+    This will start the Metro bundler and open the Expo DevTools in your browser.
+
+2.  **Open the app:**
+    - **On a physical device:** Install the **Expo Go** app from the App Store or Google Play. Scan the QR code shown in the terminal or browser to open the project.
+    - **On an Android Emulator:** Press `a` in the terminal where the server is running. (Requires Android Studio and a configured Android Virtual Device).
+    - **On an iOS Simulator:** Press `i` in the terminal where the server is running. (Requires Xcode on macOS).
 
 This will install the Expo Go app on your Genymotion device and run TheMarketIndex. 
