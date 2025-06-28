@@ -1,141 +1,159 @@
 /**
- * This hook provides authentication state and actions for the entire app.
- * It uses Zustand for state management and Firebase for authentication.
- * The onAuthStateChanged listener is set up once at the module level to
- * prevent re-renders and ensure a single source of truth for auth state.
+ * This file provides a centralized authentication hook (`useAuth`) using Zustand for state management.
+ * It handles user session, authentication state, and integrates with the `useUserStore`
+ * to fetch and manage the logged-in user's profile data from Firestore.
  */
+import { useEffect } from 'react';
 import { create } from 'zustand';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import {
-  onAuthStateChanged,
-  User,
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
 } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import * as SecureStore from 'expo-secure-store';
-import { auth, db } from '../services/firebase/firebaseConfig';
-import { useUserStore } from './useUserStore';
+import { auth, db } from '@/services/firebase/firebaseConfig';
 import { logger } from '@/services/logging/logger';
+import { useUserStore, UserProfile } from './useUserStore';
+import {
+  savePushToken,
+} from '@/services/firebase/userService';
+import { SignUpCredentials } from '@/app/(auth)';
 
-// --- Helper function for user-friendly error messages ---
-function getFriendlyAuthError(error: any): string {
-  if (!error || !error.code) {
-    return 'An unexpected error occurred. Please try again.';
-  }
-  switch (error.code) {
-    case 'auth/invalid-credential':
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-      return 'Invalid email or password. Please try again.';
-    case 'auth/email-already-in-use':
-      return 'An account with this email address already exists.';
-    case 'auth/weak-password':
-      return 'Password is too weak. Please use at least 6 characters.';
-    case 'auth/invalid-email':
-      return 'Please enter a valid email address.';
-    default:
-      return 'An unexpected error occurred. Please try again.';
-  }
-}
-
-const USER_SESSION_KEY = 'userSession';
-
-type AuthState = {
+// --- Type Definitions ---
+export type AuthState = {
   user: User | null;
   isLoading: boolean;
   error: string | null;
+  isInitialized: boolean;
+  isAuthenticated: boolean;
+  pushToken: string | null;
+  init: () => () => void; // The init function returns an unsubscribe function
+  setPushToken: (token: string) => void;
 };
 
-const useAuthStore = create<AuthState>(() => ({
+// --- Zustand Store for Auth ---
+const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  isLoading: true, // Start in a loading state until the first auth check completes.
+  isLoading: true,
   error: null,
+  isInitialized: false,
+  isAuthenticated: false,
+  pushToken: null,
+
+  setPushToken: (token: string) => {
+    set({ pushToken: token });
+    const user = get().user;
+    if (user && token) {
+      savePushToken(user.uid, token).catch((e) =>
+        logger.error('Failed to save push token after state update', e)
+      );
+    }
+  },
+
+  init: () => {
+    logger.info('Auth store init: Setting up onAuthStateChanged listener...');
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      logger.info('onAuthStateChanged triggered.');
+      if (user) {
+        const userDocRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userDocRef);
+
+        if (docSnap.exists()) {
+          const userData = docSnap.data();
+          // Correctly set the profile in useUserStore
+          useUserStore.setState({ profile: userData as UserProfile });
+          logger.info('User profile loaded.', { uid: user.uid });
+
+          const token = get().pushToken;
+          if (token) {
+            await savePushToken(user.uid, token);
+          }
+        } else {
+          logger.warn('User document not found in Firestore.', { uid: user.uid });
+          useUserStore.setState({ profile: null });
+        }
+        set({ user, isInitialized: true, isAuthenticated: true, isLoading: false });
+      } else {
+        logger.info('User is not authenticated.');
+        useUserStore.setState({ profile: null });
+        set({ user: null, isInitialized: true, isAuthenticated: false, isLoading: false });
+      }
+    });
+    return unsubscribe;
+  },
 }));
-
-// --- Initialize Auth Listener (Runs once on app startup) ---
-logger.info('Setting up global onAuthStateChanged listener...');
-onAuthStateChanged(auth, async (firebaseUser) => {
-  const { fetchProfile, clearProfile } = useUserStore.getState();
-
-  if (firebaseUser) {
-    await SecureStore.setItemAsync(USER_SESSION_KEY, JSON.stringify(firebaseUser));
-    await fetchProfile(firebaseUser.uid);
-    useAuthStore.setState({ user: firebaseUser, isLoading: false, error: null });
-    logger.info('Auth state updated: User is authenticated.', { uid: firebaseUser.uid });
-  } else {
-    await SecureStore.deleteItemAsync(USER_SESSION_KEY);
-    clearProfile();
-    useAuthStore.setState({ user: null, isLoading: false, error: null });
-    logger.info('Auth state updated: User is not authenticated.');
-  }
-});
 
 // --- Main Auth Hook ---
 export function useAuth() {
-  const { user, isLoading, error } = useAuthStore();
+  const authState = useAuthStore();
+  const { fetchProfile } = useUserStore();
 
-  const setLoading = (loading: boolean) => useAuthStore.setState({ isLoading: loading });
-  const setError = (authError: string | null) => useAuthStore.setState({ error: authError });
+  useEffect(() => {
+    // Get the init function directly from the store to avoid a dependency loop.
+    // The empty dependency array [] ensures this runs only once.
+    const unsubscribe = useAuthStore.getState().init();
+    return () => unsubscribe();
+  }, []);
 
-  const signUp = async (email: string, password: string) => {
+  const setLoading = (isLoading: boolean) => useAuthStore.setState({ isLoading });
+  const setError = (error: string | null) => useAuthStore.setState({ error });
+
+  const signUp = async ({ email, password, displayName }: SignUpCredentials) => {
     setLoading(true);
     setError(null);
-    logger.info('Attempting to sign up user.', { email });
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      logger.info('Sign up successful.', { uid: userCredential.user.uid });
-      // The onAuthStateChanged listener will handle setting the user state.
-      if (userCredential.user) {
-        const userRef = doc(db, 'users', userCredential.user.uid);
-        await setDoc(userRef, {
-          uid: userCredential.user.uid,
-          email: userCredential.user.email,
-          displayName: '',
-          photoURL: '',
-          friends: [],
-        });
-      }
-      return userCredential;
-    } catch (e: any) {
-      const friendlyError = getFriendlyAuthError(e);
-      logger.error('Sign up failed.', { email, error: e?.code });
-      setError(friendlyError);
+      const { user } = userCredential;
+      await setDoc(doc(db, 'users', user.uid), {
+        uid: user.uid,
+        displayName,
+        email: user.email,
+        photoURL: '',
+        friends: [],
+        createdAt: serverTimestamp(),
+      });
+      await fetchProfile(user.uid); // Fetch profile after creation
       setLoading(false);
-      throw e;
+      return userCredential;
+    } catch (error: any) {
+      logger.error('Sign up failed', error);
+      setError(error.message);
+      setLoading(false);
+      throw error;
     }
   };
 
   const signIn = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
-    logger.info('Attempting to sign in user.', { email });
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      logger.info('Sign in successful.', { uid: userCredential.user.uid });
-      // The onAuthStateChanged listener will handle setting the user state.
-      return userCredential;
-    } catch (e: any) {
-      const friendlyError = getFriendlyAuthError(e);
-      logger.error('Sign in failed.', { email, error: e?.code });
-      setError(friendlyError);
+      await fetchProfile(userCredential.user.uid);
       setLoading(false);
+      return userCredential;
+    } catch (error: any) {
+      logger.error('Sign in failed', error);
+      setError(error.message);
+      setLoading(false);
+      throw error;
     }
   };
 
   const signOut = async () => {
-    const uid = useAuthStore.getState().user?.uid;
-    logger.info('Attempting to sign out user.', { uid });
-    // Setting loading state here is optional as onAuthStateChanged will manage it.
+    setLoading(true);
+    setError(null);
     try {
       await firebaseSignOut(auth);
-      logger.info('Sign out successful.', { uid });
-    } catch (e: any) {
-      const friendlyError = getFriendlyAuthError(e);
-      logger.error('Sign out failed.', { uid, error: e?.code });
-      setError(friendlyError);
+      useUserStore.getState().clearProfile();
+      setLoading(false);
+    } catch (error: any) {
+      logger.error('Sign out failed', error);
+      setError(error.message);
+      setLoading(false);
+      throw error;
     }
   };
 
-  return { user, isLoading, error, signUp, signIn, signOut, setError };
+  return { ...authState, signUp, signIn, signOut, setError };
 } 

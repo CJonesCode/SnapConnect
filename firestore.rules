@@ -17,6 +17,46 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // --- Add Rules for Other Collections Below ---
+    // Friendships Collection
+    match /friendships/{friendshipId} {
+      // A user can create a friendship document if they are one of the members.
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.members;
+
+      // A user can read, update, or delete a friendship document if they are a member.
+      // This allows the recipient to 'accept' (update) or 'decline' (delete) a request.
+      allow read, update, delete: if request.auth != null && request.auth.uid in resource.data.members;
+    }
+
+    // Snaps Collection
+    match /snaps/{snapId} {
+      // A user can create a snap.
+      allow create: if request.auth != null;
+      // Users can only read snaps sent to them.
+      allow read: if request.auth != null && resource.data.recipientId == request.auth.uid;
+      // A user can update a snap sent to them (e.g., to mark as viewed).
+      allow update: if request.auth != null && resource.data.recipientId == request.auth.uid;
+    }
+
+    // Stories Collection
+    match /stories/{storyId} {
+      // A user can create their own story.
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Authenticated users can read stories. (Further filtering is done client-side).
+      allow read: if request.auth != null;
+    }
+
+    // Groups Collection
+    match /groups/{groupId} {
+      // Authenticated users can create groups.
+      allow create: if request.auth != null;
+      // A user can read/update a group only if they are a member.
+      allow read, update: if request.auth != null && resource.data.members.hasAny([request.auth.uid]);
+      
+      // Messages Subcollection
+      match /messages/{messageId} {
+        // A user can read/write messages only if they are a member of the parent group.
+        allow read, create: if request.auth != null && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+      }
+    }
   }
 }

@@ -1,13 +1,15 @@
 /**
  * This screen is presented modally to preview a captured photo.
- * It receives the photo's URI and displays it, offering options
- * to discard or proceed with the snap.
+ * It displays the photo and a list of friends to send the snap to.
  */
-import { View, Image, StyleSheet, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Image, StyleSheet, SafeAreaView, FlatList, TouchableOpacity } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSnap } from '@/services/firebase/snapService';
-import { Button, IconButton, useTheme } from 'react-native-paper';
+import { subscribeToFriends, UserProfile } from '@/services/firebase/userService';
+import { createStory } from '@/services/firebase/storyService';
+import { Button, IconButton, useTheme, List, ActivityIndicator, Text } from 'react-native-paper';
 
 export default function PhotoPreviewModal() {
   const router = useRouter();
@@ -15,32 +17,87 @@ export default function PhotoPreviewModal() {
   const { uri } = useLocalSearchParams<{ uri: string }>();
   const theme = useTheme();
 
+  const [friends, setFriends] = useState<UserProfile[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const [isPostingStory, setIsPostingStory] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeToFriends(user.uid, (fetchedFriends) => {
+      setFriends(fetchedFriends);
+      setIsLoading(false);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
   if (!uri) {
-    // Should not happen if navigation is set up correctly
     return null;
   }
 
   const handleDiscard = () => {
+    if (isSending) return;
     router.back();
   };
 
+  const toggleFriendSelection = (uid: string) => {
+    setSelectedFriends((currentSelected) =>
+      currentSelected.includes(uid)
+        ? currentSelected.filter((id) => id !== uid)
+        : [...currentSelected, uid]
+    );
+  };
+
   const handleSend = async () => {
-    if (!user) {
-      console.error("No user found, can't send snap.");
-      // Optionally, navigate to auth screen or show an error
+    if (!user || selectedFriends.length === 0) {
       return;
     }
-
-    // TODO: Replace this with a friend selection UI
-    const recipientId = 'HARDCODED_RECIPIENT_ID';
-
+    setIsSending(true);
     try {
-      await sendSnap(uri, user.uid, recipientId);
+      const sendPromises = selectedFriends.map((recipientId) =>
+        sendSnap(uri, user.uid, recipientId)
+      );
+      await Promise.all(sendPromises);
       router.back(); // Go back to the camera after sending
     } catch (error) {
-      console.error('Failed to send snap:', error);
+      console.error('Failed to send one or more snaps:', error);
       // Optionally, show an error message to the user
+    } finally {
+      setIsSending(false);
     }
+  };
+
+  const handlePostStory = async () => {
+    if (!user) return;
+    setIsPostingStory(true);
+    try {
+      await createStory(uri, user.uid);
+      router.back(); // Go back to camera after posting
+    } catch (error) {
+      console.error('Failed to post story:', error);
+      // Optionally, show an error message
+    } finally {
+      setIsPostingStory(false);
+    }
+  };
+
+  const renderFriendItem = ({ item }: { item: UserProfile }) => {
+    const isSelected = selectedFriends.includes(item.uid);
+    return (
+      <TouchableOpacity onPress={() => toggleFriendSelection(item.uid)}>
+        <List.Item
+          title={item.displayName}
+          style={isSelected && { backgroundColor: theme.colors.surfaceVariant }}
+          left={(props) => (
+            <List.Icon
+              {...props}
+              icon={isSelected ? 'check-circle' : 'circle-outline'}
+            />
+          )}
+        />
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -53,17 +110,42 @@ export default function PhotoPreviewModal() {
         onPress={handleDiscard}
         style={styles.closeButton}
         iconColor={theme.colors.onBackground}
+        disabled={isSending || isPostingStory}
       />
 
-      <View style={styles.sendButtonContainer}>
-        <Button
-          mode="contained"
-          onPress={handleSend}
-          icon="send"
-          style={styles.sendButton}
-        >
-          Send
-        </Button>
+      <View style={styles.bottomContainer}>
+        {isLoading ? (
+          <ActivityIndicator size="large" />
+        ) : (
+          <FlatList
+            data={friends}
+            renderItem={renderFriendItem}
+            keyExtractor={(item) => item.uid}
+            ListEmptyComponent={<Text style={styles.emptyText}>You have no friends to send this to.</Text>}
+          />
+        )}
+        <View style={styles.actionRow}>
+          <Button
+            mode="outlined"
+            icon="book-plus-multiple"
+            style={styles.actionButton}
+            onPress={handlePostStory}
+            loading={isPostingStory}
+            disabled={isSending || isPostingStory}
+          >
+            Story
+          </Button>
+          <Button
+            mode="contained"
+            onPress={handleSend}
+            icon="send"
+            style={styles.actionButton}
+            disabled={selectedFriends.length === 0 || isSending || isPostingStory}
+            loading={isSending}
+          >
+            {`Send (${selectedFriends.length})`}
+          </Button>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -74,7 +156,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   image: {
-    flex: 1,
+    flex: 0.6, // Take up 60% of the screen height
   },
   closeButton: {
     position: 'absolute',
@@ -82,15 +164,26 @@ const styles = StyleSheet.create({
     left: 10,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
-  sendButtonContainer: {
-    position: 'absolute',
-    bottom: 40,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
+  bottomContainer: {
+    flex: 0.4, // Take up remaining 40%
+    paddingVertical: 10,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 10,
+  },
+  actionButton: {
+    flex: 1,
+    marginHorizontal: 5,
   },
   sendButton: {
-    paddingHorizontal: 16,
+    margin: 20,
     paddingVertical: 8,
   },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
+  }
 });

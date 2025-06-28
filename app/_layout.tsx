@@ -23,20 +23,20 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { user, isLoading } = useAuth();
+  const { user, isInitialized } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading) {
+    if (isInitialized) {
       // Hide the splash screen now that we have an auth state.
       SplashScreen.hideAsync();
       const targetRoute = user ? '/(tabs)' : '/(auth)';
       logger.info('Auth state resolved, navigating.', { targetRoute });
       router.replace(targetRoute);
     }
-  }, [user, isLoading, router]);
+  }, [user, isInitialized, router]);
 
-  if (isLoading) {
+  if (!isInitialized) {
     // While determining auth state, show our custom splash screen.
     return <CustomSplashScreen />;
   }
