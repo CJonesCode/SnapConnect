@@ -1,6 +1,12 @@
 const { getDefaultConfig } = require("expo/metro-config");
-const { withNativeWind } = require('nativewind/metro');
 
 const config = getDefaultConfig(__dirname);
 
-module.exports = withNativeWind(config, { input: './global.css' }) 
+// 1. Workaround for a Firebase v9 compatibility issue with Metro.
+// This can be removed when the issue is resolved in a future release.
+// See: https://docs.expo.dev/guides/using-firebase/#configure-metro
+// And: https://github.com/firebase/firebase-js-sdk/issues/7838
+config.resolver.unstable_enablePackageExports = false;
+config.resolver.sourceExts.push('cjs');
+
+module.exports = config; 

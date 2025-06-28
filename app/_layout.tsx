@@ -1,13 +1,13 @@
-import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/services/logging/logger';
+import { SplashScreen as CustomSplashScreen } from '@/components/SplashScreen';
+import { PaperProvider } from 'react-native-paper';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -23,15 +23,32 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const { user, isInitialized } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (isInitialized) {
+      // Hide the splash screen now that we have an auth state.
+      SplashScreen.hideAsync();
+      const targetRoute = user ? '/(tabs)' : '/(auth)';
+      logger.info('Auth state resolved, navigating.', { targetRoute });
+      router.replace(targetRoute);
+    }
+  }, [user, isInitialized, router]);
+
+  if (!isInitialized) {
+    // While determining auth state, show our custom splash screen.
+    return <CustomSplashScreen />;
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <PaperProvider>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
-    </ThemeProvider>
+    </PaperProvider>
   );
 }
 
@@ -46,14 +63,9 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
-    return null;
+    // Also show the splash screen while fonts are loading.
+    return <CustomSplashScreen />;
   }
 
   return <RootLayoutNav />;

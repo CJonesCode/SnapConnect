@@ -1,34 +1,62 @@
-/**
- * These rules are for the Firestore database. They are designed to be secure,
- * ensuring that users can only read and write their own data, and interact
- * with snaps and other collections in a controlled manner.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can read and update their own user document.
-    // They cannot create or delete their own user document directly.
-    // User documents are created server-side (in our case, via the useAuth hook) upon sign-up.
+    // Users Collection
     match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // A user can create their own document, but not someone else's.
+      allow create: if request.auth != null && request.auth.uid == userId;
+
+      // Authenticated users can read public user profiles.
+      allow read: if request.auth != null;
+
+      // A user can only update their own document.
+      allow update: if request.auth != null && request.auth.uid == userId;
+
+      // Deleting user documents via the client is disallowed.
+      allow delete: if false;
     }
 
-    // Snaps can be created by any authenticated user.
-    // Users can only read snaps sent to them.
-    // Users can only delete snaps they have sent.
-    // Snaps cannot be updated (they are immutable after sending).
+    // Friendships Collection
+    match /friendships/{friendshipId} {
+      // A user can create a friendship document if they are one of the members.
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.members;
+
+      // A user can read, update, or delete a friendship document if they are a member.
+      // This allows the recipient to 'accept' (update) or 'decline' (delete) a request.
+      allow read, update, delete: if request.auth != null && request.auth.uid in resource.data.members;
+    }
+
+    // Snaps Collection
     match /snaps/{snapId} {
+      // A user can create a snap.
       allow create: if request.auth != null;
+      // Users can only read snaps sent to them.
       allow read: if request.auth != null && resource.data.recipientId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
-      allow update: if false;
+      // A user can update a snap sent to them (e.g., to mark as viewed).
+      allow update: if request.auth != null && resource.data.recipientId == request.auth.uid;
     }
 
-    // A placeholder for future collections like stories and groups.
-    // By default, all other collections are locked down.
-    match /{document=**} {
-      allow read, write: if false;
+    // Stories Collection
+    match /stories/{storyId} {
+      // A user can create their own story.
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      // Authenticated users can read stories. (Further filtering is done client-side).
+      allow read: if request.auth != null;
+    }
+
+    // Groups Collection
+    match /groups/{groupId} {
+      // Authenticated users can create groups.
+      allow create: if request.auth != null;
+      // A user can read/update a group only if they are a member.
+      allow read, update: if request.auth != null && resource.data.members.hasAny([request.auth.uid]);
+      
+      // Messages Subcollection
+      match /messages/{messageId} {
+        // A user can read/write messages only if they are a member of the parent group.
+        allow read, create: if request.auth != null && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+      }
     }
   }
-} 
+}
