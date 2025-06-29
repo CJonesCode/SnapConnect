@@ -104,26 +104,35 @@ export default function PhotoPreviewModal() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header with close button */}
+      <View style={styles.header}>
+        <IconButton 
+          icon="close" 
+          size={24} 
+          onPress={() => {
+            resetMedia();
+            navigation.goBack();
+          }} 
+          style={styles.closeButton} 
+        />
+      </View>
+
+      {/* Media content */}
       {type === 'video' ? (
         <Video
           source={{ uri }}
           style={styles.previewImage}
-          useNativeControls
+          useNativeControls={true}
           resizeMode={ResizeMode.CONTAIN}
-          isLooping
+          isLooping={true}
+          shouldPlay={true}
+          isMuted={false}
+          onLoad={() => logger.info('Video loaded in modal')}
+          onError={(error) => logger.error('Video error in modal', { error })}
         />
       ) : (
         <Image source={{ uri }} style={styles.previewImage} resizeMode="contain" />
       )}
-      <IconButton 
-        icon="close" 
-        size={30} 
-        onPress={() => {
-          resetMedia();
-          navigation.goBack();
-        }} 
-        style={styles.closeButton} 
-      />
 
       <View style={styles.contentContainer}>
         <View style={styles.inputContainer}>
@@ -188,16 +197,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 5,
+    backgroundColor: '#000',
+  },
   previewImage: {
     width: '100%',
-    height: '50%',
+    height: '45%', // Reduced slightly to account for header
     backgroundColor: 'black',
   },
   closeButton: {
-    position: 'absolute',
-    top: 40,
-    left: 10,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   contentContainer: {
     flex: 1,

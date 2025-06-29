@@ -6,7 +6,7 @@
  * and maintainability.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Linking } from 'react-native';
+import { View, StyleSheet, Linking, Platform } from 'react-native';
 import { 
   CameraView, 
   useCameraPermissions, 
@@ -171,9 +171,15 @@ export default function CameraScreen() {
         flash={flash}
         ref={cameraRef}
         active={isCameraActive}
+        mode="video"
+        videoQuality={Platform.OS === 'android' ? '480p' : '720p'}
         onCameraReady={() => {
           logger.info('EVENT: onCameraReady fired!');
-          setCameraReady(true);
+          // Add a small delay to ensure camera is fully ready
+          setTimeout(() => {
+            setCameraReady(true);
+            logger.info('Camera marked as ready after timeout');
+          }, 500);
         }}
         onMountError={(e) =>
           logger.error('Camera mount error', { message: e.message })
@@ -184,6 +190,7 @@ export default function CameraScreen() {
         cameraRef={cameraRef} 
         disabled={controlsDisabled}
         hasAllPermissions={hasAllPermissions}
+        cameraReady={cameraReady}
       />
     </View>
   );
