@@ -11,6 +11,9 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
+  deleteUser,
 } from 'firebase/auth';
 import { auth, db } from '@/services/firebase/firebaseConfig';
 import { logger } from '@/services/logging/logger';
@@ -115,6 +118,9 @@ export function useAuth() {
 
       // --- Create user and username docs in a transaction ---
       const username = email.split('@')[0].toLowerCase();
+      if (username.length > 24) {
+        throw new Error('Username (from email) must be 24 characters or less.');
+      }
       const userDocRef = doc(db, 'users', user.uid);
       const usernameDocRef = doc(db, 'usernames', username);
 
@@ -126,11 +132,12 @@ export function useAuth() {
         }
 
         // Define user data
+        const trimmedDisplayName = displayName.trim();
         const newUserProfile = {
           uid: user.uid,
           username,
-          displayName,
-          displayName_lowercase: displayName.toLowerCase(),
+          displayName: trimmedDisplayName,
+          displayName_lowercase: trimmedDisplayName.toLowerCase(),
           email,
           photoURL: `https://i.pravatar.cc/150?u=${user.uid}`, // User-specific placeholder
           friends: [],
@@ -169,6 +176,26 @@ export function useAuth() {
     }
   };
 
+  const deleteAccount = async (password: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (!auth.currentUser) {
+        throw new Error('No user is currently signed in.');
+      }
+      const credential = EmailAuthProvider.credential(auth.currentUser.email!, password);
+      await reauthenticateWithCredential(auth.currentUser, credential);
+      await deleteUser(auth.currentUser);
+      logger.info('User account deleted successfully.');
+      setLoading(false);
+    } catch (error: any) {
+      logger.error('Failed to delete user account', error);
+      setError(error.message);
+      setLoading(false);
+      throw error;
+    }
+  };
+
   const signOut = async () => {
     setLoading(true);
     setError(null);
@@ -184,5 +211,5 @@ export function useAuth() {
     }
   };
 
-  return { ...authState, signUp, signIn, signOut, setError };
+  return { ...authState, signUp, signIn, signOut, setError, deleteAccount };
 } 

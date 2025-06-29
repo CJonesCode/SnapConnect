@@ -83,7 +83,6 @@ export const onTipCreate = functions.firestore
 
 */
 
-/*
 // --- DATA CLEANUP: User Deletion Trigger ---
 // The following function automatically deletes a user's data from Firestore
 // and their files from Cloud Storage when their account is deleted from
@@ -95,21 +94,35 @@ export const onUserDelete = functions.auth.user().onDelete(async (user) => {
 
   logger.info(`User ${uid} is being deleted. Cleaning up associated data.`);
 
-  // 1. Delete user's document in Firestore
-  const firestorePromise = admin.firestore().collection("users").doc(uid).delete();
+  const userDocRef = admin.firestore().collection("users").doc(uid);
 
-  // 2. Delete user's files in Cloud Storage
-  // This deletes all files in the user's dedicated folders for tips and signals.
-  const bucket = admin.storage().bucket();
-  const tipsPromise = bucket.deleteFiles({ prefix: `tips/${uid}` });
-  const signalsPromise = bucket.deleteFiles({ prefix: `signals/${uid}` });
-  
   try {
-    await Promise.all([firestorePromise, tipsPromise, signalsPromise]);
-    logger.info(`Successfully cleaned up data for user ${uid}.`);
+    const userDoc = await userDocRef.get();
+    const userData = userDoc.data();
+    
+    if (!userData) {
+      logger.warn(`No user document found for uid: ${uid}. Cannot clean up username.`);
+    }
+
+    const username = userData?.username;
+    
+    // 1. Delete user's document from 'users'
+    const userDeletePromise = userDocRef.delete();
+
+    // 2. Delete username from 'usernames'
+    let usernameDeletePromise: Promise<any> = Promise.resolve();
+    if (username) {
+      usernameDeletePromise = admin.firestore().collection("usernames").doc(username).delete();
+    }
+
+    // 3. Delete user's files in Cloud Storage
+    const bucket = admin.storage().bucket();
+    const tipsPromise = bucket.deleteFiles({ prefix: `tips/${uid}` });
+    const signalsPromise = bucket.deleteFiles({ prefix: `signals/${uid}` });
+    
+    await Promise.all([userDeletePromise, usernameDeletePromise, tipsPromise, signalsPromise]);
+    logger.info(`Successfully cleaned up all data for user ${uid}.`);
   } catch (error) {
     logger.error(`Error cleaning up data for user ${uid}:`, { error });
   }
 });
-
-*/ 

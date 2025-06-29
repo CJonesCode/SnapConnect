@@ -31,7 +31,7 @@ const validationSchema = z
   .object({
     email: z.string().email('Please enter a valid email address.'),
     password: z.string().min(8, 'Password must be at least 8 characters long.'),
-    displayName: z.string().optional(),
+    displayName: z.string().max(24, 'Display name must be 24 characters or less.').optional(),
     confirmPassword: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -79,7 +79,12 @@ export default function LoginScreen() {
     },
   });
 
-  const { signUp, signIn, error: authError } = useAuth();
+  const {
+    signUp,
+    signIn,
+    error: authError,
+    isLoading,
+  } = useAuth();
   const theme = useTheme();
 
   const onSubmit = async (data: SignUpCredentials) => {
@@ -216,6 +221,8 @@ export default function LoginScreen() {
           mode="contained"
           onPress={handleSubmit(onSubmit)}
           style={styles.button}
+          loading={isLoading}
+          disabled={isLoading}
         >
           {isSignUp ? 'Sign Up' : 'Login'}
         </Button>
