@@ -11,6 +11,7 @@ import {
   Image,
   StyleSheet,
   Pressable,
+  ScrollView,
 } from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -84,6 +85,7 @@ export default function LoginScreen() {
     signIn,
     error: authError,
     isLoading,
+    setError: setAuthError,
   } = useAuth();
   const theme = useTheme();
 
@@ -115,17 +117,24 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.keyboardAvoidingView}
+      style={[
+        styles.keyboardAvoidingView,
+        { backgroundColor: theme.colors.background },
+      ]}
     >
-      <View
-        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
       >
         <Image
           source={require('../../assets/images/logo.png')}
           style={styles.logo}
         />
         <Text variant="headlineMedium" style={styles.title}>
-          {isSignUp ? 'Create Account' : 'Welcome Back'}
+          {isSignUp ? 'Create Account' : 'Welcome back to'}
+        </Text>
+        <Text variant="headlineLarge" style={styles.appName}>
+          TheMarketIndex
         </Text>
 
         <View style={styles.formContainer}>
@@ -138,7 +147,10 @@ export default function LoginScreen() {
                   <TextInput
                     label="Display Name"
                     onBlur={onBlur}
-                    onChangeText={onChange}
+                    onChangeText={(text) => {
+                      if (authError) setAuthError(null);
+                      onChange(text);
+                    }}
                     value={value}
                     autoCapitalize="words"
                     error={!!errors.displayName}
@@ -159,7 +171,10 @@ export default function LoginScreen() {
               <TextInput
                 label="Email"
                 onBlur={onBlur}
-                onChangeText={onChange}
+                onChangeText={(text) => {
+                  if (authError) setAuthError(null);
+                  onChange(text);
+                }}
                 value={value}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -179,7 +194,10 @@ export default function LoginScreen() {
               <TextInput
                 label="Password"
                 onBlur={onBlur}
-                onChangeText={onChange}
+                onChangeText={(text) => {
+                  if (authError) setAuthError(null);
+                  onChange(text);
+                }}
                 value={value}
                 secureTextEntry
                 error={!!errors.password}
@@ -199,7 +217,10 @@ export default function LoginScreen() {
                 <TextInput
                   label="Confirm Password"
                   onBlur={onBlur}
-                  onChangeText={onChange}
+                  onChangeText={(text) => {
+                    if (authError) setAuthError(null);
+                    onChange(text);
+                  }}
                   value={value}
                   secureTextEntry
                   error={!!errors.confirmPassword}
@@ -234,7 +255,7 @@ export default function LoginScreen() {
               : "Don't have an account? Sign Up"}
           </Text>
         </Pressable>
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -244,19 +265,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   container: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   logo: {
-    width: 128,
-    height: 128,
-    marginBottom: 24,
+    width: 120,
+    height: 120,
+    marginBottom: 12,
     resizeMode: 'contain',
   },
+  appName: {
+    marginBottom: 24,
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
   title: {
-    marginBottom: 32,
+    marginBottom: 4,
+    textAlign: 'center',
   },
   formContainer: {
     width: '100%',

@@ -1,7 +1,7 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Pressable, Image, StyleSheet } from 'react-native';
 import { useTheme } from 'react-native-paper';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
@@ -29,6 +29,13 @@ export default function TabLayout() {
         headerTitleStyle: {
           color: theme.colors.onSurface,
         },
+        headerTitleAlign: 'center',
+        headerLeft: () => (
+          <Image
+            source={require('../../assets/images/logo.png')}
+            style={styles.headerLogo}
+          />
+        ),
       }}
     >
       <Tabs.Screen
@@ -78,3 +85,12 @@ export default function TabLayout() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerLogo: {
+    width: 40,
+    height: 40,
+    marginLeft: 15,
+    resizeMode: 'contain',
+  },
+});

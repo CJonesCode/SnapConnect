@@ -154,9 +154,12 @@ export function useAuth() {
       return userCredential;
     } catch (error: any) {
       logger.error('Sign up failed', error);
-      setError(error.message);
+      let errorMessage = 'Could not create account. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'An account with this email address already exists.';
+      }
+      setError(errorMessage);
       setLoading(false);
-      throw error;
     }
   };
 
@@ -169,10 +172,10 @@ export function useAuth() {
       setLoading(false);
       return userCredential;
     } catch (error: any) {
-      logger.error('Sign in failed', error);
-      setError(error.message);
+      logger.error('Sign in failed', { code: error.code, message: error.message });
+      // To prevent user enumeration attacks, always return a generic error message.
+      setError('Invalid email or password.');
       setLoading(false);
-      throw error;
     }
   };
 
@@ -190,9 +193,12 @@ export function useAuth() {
       setLoading(false);
     } catch (error: any) {
       logger.error('Failed to delete user account', error);
-      setError(error.message);
+      let errorMessage = 'Failed to delete account.';
+      if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+        errorMessage = 'The password you entered is incorrect.';
+      }
+      setError(errorMessage);
       setLoading(false);
-      throw error;
     }
   };
 
@@ -205,9 +211,8 @@ export function useAuth() {
       setLoading(false);
     } catch (error: any) {
       logger.error('Sign out failed', error);
-      setError(error.message);
+      setError('Failed to sign out. Please try again.');
       setLoading(false);
-      throw error;
     }
   };
 

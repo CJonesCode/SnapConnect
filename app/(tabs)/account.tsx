@@ -5,8 +5,8 @@
  * actions such as signing out. It serves as the main hub for user-specific
  * settings and management.
  */
-import { View, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
-import { Button, Text, Divider, useTheme, TextInput, IconButton, Dialog, Portal, HelperText } from 'react-native-paper';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { Avatar, Button, Text, Divider, useTheme, TextInput, IconButton, Dialog, Portal, HelperText } from 'react-native-paper';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserStore } from '@/hooks/useUserStore';
 import { logger } from '@/services/logging/logger';
@@ -80,16 +80,24 @@ export default function AccountScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-    <View style={[styles.innerContainer, { backgroundColor: colors.background }]}>
-      <Text variant="headlineLarge" style={styles.title}>
-        Account
-      </Text>
-      <Divider style={styles.divider} />
+    <ScrollView 
+      contentContainerStyle={[styles.innerContainer, { backgroundColor: colors.background }]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.headerSection}>
+        {profile?.photoURL ? (
+          <Avatar.Image
+              size={128}
+              source={{ uri: profile.photoURL }}
+              style={styles.avatar}
+          />
+        ) : (
+          <Avatar.Icon size={128} icon="account" style={styles.avatar} />
+        )}
 
-      {profile && (
-        <View style={styles.profileSection}>
+        {profile && (
           <View style={styles.displayNameContainer}>
             {isEditing ? (
               <TextInput
@@ -99,6 +107,7 @@ export default function AccountScreen() {
                 style={styles.input}
                 dense
                 maxLength={24}
+                textAlign="center"
               />
             ) : (
               <Text variant="headlineSmall" style={styles.displayName}>{profile.displayName || 'Not set'}</Text>
@@ -108,13 +117,21 @@ export default function AccountScreen() {
               onPress={isEditing ? handleSave : () => setIsEditing(true)}
               disabled={isUpdating}
               loading={isUpdating}
+              style={styles.editButton}
             />
           </View>
-          {isEditing && (
-            <HelperText type="info" visible={isEditing}>
-              {`${displayName.length} / 24`}
-            </HelperText>
-          )}
+        )}
+        {isEditing && (
+          <HelperText type="info" visible={isEditing}>
+            {`${displayName.length} / 24`}
+          </HelperText>
+        )}
+      </View>
+
+      <Divider style={styles.divider} />
+
+      {profile && (
+        <View style={styles.profileSection}>
           <Text variant="labelLarge" style={styles.label}>Username:</Text>
           <Text variant="bodyLarge" style={styles.value}>@{profile.username}</Text>
           <Text variant="labelLarge" style={styles.label}>Email:</Text>
@@ -122,7 +139,7 @@ export default function AccountScreen() {
         </View>
       )}
 
-
+      <View style={{ flex: 1 }} />
       <View style={styles.dangerZone}>
       <Button
         mode="contained"
@@ -166,7 +183,7 @@ export default function AccountScreen() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
-    </View>
+    </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -176,14 +193,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   innerContainer: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'flex-start',
     padding: 20,
     paddingTop: 48,
+    flexGrow: 1,
   },
-  title: {
+  headerSection: {
+    alignItems: 'center',
     marginBottom: 20,
+    width: '100%',
+  },
+  avatar: {
+    marginBottom: 16,
   },
   divider: {
     width: '100%',
@@ -196,12 +218,12 @@ const styles = StyleSheet.create({
   displayNameContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    position: 'relative',
     width: '100%',
-    marginBottom: 16,
   },
   displayName: {
-    flex: 1,
+    textAlign: 'center',
   },
   label: {
     marginTop: 8,
@@ -211,9 +233,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    flex: 1,
-    marginRight: 8,
-    backgroundColor: 'transparent'
+    backgroundColor: 'transparent',
+    minWidth: '60%',
+    height: 48, // To match Text height roughly
+  },
+  editButton: {
+    position: 'absolute',
+    right: 0,
+    top: '50%',
+    transform: [{ translateY: -24 }], // Half of IconButton size (48)
   },
   button: {
     width: '100%',
@@ -222,7 +250,6 @@ const styles = StyleSheet.create({
   },
   dangerZone: {
     width: '100%',
-    marginTop: 'auto',
     paddingBottom: 20,
     borderTopWidth: 1,
     borderTopColor: 'grey',
