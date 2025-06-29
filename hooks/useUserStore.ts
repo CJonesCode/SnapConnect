@@ -12,7 +12,9 @@ import { db } from '../services/firebase/firebaseConfig';
 export type UserProfile = {
   uid: string;
   email: string;
+  username: string;
   displayName: string;
+  displayName_lowercase: string;
   photoURL: string;
   friends: string[];
 };

@@ -19,11 +19,21 @@ export default function TipScreen() {
 
   return (
     <Surface style={styles.container}>
-      <Image source={{ uri: tip.mediaUrl as string }} style={styles.image} resizeMode="contain" />
+      <Image
+        source={{ uri: tip.mediaUrl as string }}
+        style={styles.image}
+        resizeMode="contain"
+      />
       <View style={styles.overlay}>
-        <Text variant="headlineLarge" style={styles.tickerText}>${tip.ticker}</Text>
-        <Text variant="bodyMedium" style={styles.fromText}>from @{tip.from}</Text>
-        <Text variant="titleMedium" style={styles.tipText}>{tip.tip}</Text>
+        <Text variant="headlineLarge" style={styles.tickerText}>
+          ${tip.ticker}
+        </Text>
+        <Text variant="bodyMedium" style={styles.fromText}>
+          from @{tip.from}
+        </Text>
+        <Text variant="titleMedium" style={styles.tipText}>
+          {tip.tip}
+        </Text>
       </View>
     </Surface>
   );
@@ -60,4 +70,4 @@ const styles = StyleSheet.create({
   tipText: {
     color: 'white',
   },
-}); 
+});

@@ -18,6 +18,7 @@ import {
   setDoc,
   writeBatch,
   documentId,
+  limit,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
 
@@ -26,7 +27,9 @@ import { db } from './firebaseConfig';
  */
 export type UserProfile = {
   uid: string;
+  username: string;
   displayName: string;
+  displayName_lowercase: string;
   photoURL?: string;
 };
 
@@ -44,34 +47,62 @@ export type Friendship = {
 /**
  * Searches for users by their display name.
  * Note: This requires a Firestore index on the 'users' collection for the 'displayName' field.
- * @param displayName - The display name to search for.
+ * @param searchText - The text to search for in usernames or display names.
  * @returns A promise that resolves to an array of user profiles matching the search query.
  */
-export async function searchUsers(displayName: string): Promise<UserProfile[]> {
-  if (!displayName.trim()) {
+export async function searchUsers(searchText: string): Promise<UserProfile[]> {
+  const trimmedSearchText = searchText.trim();
+  if (!trimmedSearchText) {
     return [];
   }
 
   const usersRef = collection(db, 'users');
-  const searchQuery = query(
+  const lowercasedSearchText = trimmedSearchText.toLowerCase();
+
+  // Query by username (case-insensitive prefix match)
+  const usernameQuery = query(
     usersRef,
-    where('displayName', '>=', displayName),
-    where('displayName', '<=', displayName + '\uf8ff')
+    where('username', '>=', lowercasedSearchText),
+    where('username', '<=', lowercasedSearchText + '\uf8ff'),
+    limit(10)
+  );
+
+  // Query by displayName (case-insensitive prefix match)
+  const displayNameQuery = query(
+    usersRef,
+    where('displayName_lowercase', '>=', lowercasedSearchText),
+    where('displayName_lowercase', '<=', lowercasedSearchText + '\uf8ff'),
+    limit(10)
   );
 
   try {
-    const querySnapshot = await getDocs(searchQuery);
-    const users: UserProfile[] = [];
-    querySnapshot.forEach((doc) => {
-      // Ensure you cast the data to the expected type, including the document ID as uid
+    const [usernameSnapshot, displayNameSnapshot] = await Promise.all([
+      getDocs(usernameQuery),
+      getDocs(displayNameQuery),
+    ]);
+
+    const usersMap = new Map<string, UserProfile>();
+
+    // Helper to process snapshots and add unique users to the map
+    const processSnapshot = (snapshot: typeof usernameSnapshot) => {
+      snapshot.forEach((doc) => {
+        if (!usersMap.has(doc.id)) {
       const data = doc.data();
-      users.push({
+          usersMap.set(doc.id, {
         uid: doc.id,
+            username: data.username,
         displayName: data.displayName,
+            displayName_lowercase: data.displayName_lowercase,
         photoURL: data.photoURL,
       });
-    });
-    return users;
+        }
+      });
+    };
+
+    processSnapshot(usernameSnapshot);
+    processSnapshot(displayNameSnapshot);
+
+    return Array.from(usersMap.values());
   } catch (error) {
     console.error('Error searching for users:', error);
     // This will alert you in the console if a composite index is needed.
@@ -249,6 +280,36 @@ export async function savePushToken(userId: string, token: string): Promise<void
     const userRef = doc(db, 'users', userId);
     await updateDoc(userRef, { pushToken: token });
   } catch (error) {
-    console.error('Error saving push token:', error);
+    console.error('Error saving push token', error);
+    throw new Error('Failed to save push token.');
+  }
+}
+
+/**
+ * Updates a user's profile information in Firestore.
+ * If the displayName is being updated, it also updates the
+ * displayName_lowercase field to ensure case-insensitive search continues to work.
+ *
+ * @param userId The UID of the user to update.
+ * @param profileData The profile data to update.
+ */
+export async function updateUserProfile(
+  userId: string,
+  profileData: Partial<Pick<UserProfile, 'displayName' | 'photoURL'>>
+): Promise<void> {
+  const userRef = doc(db, 'users', userId);
+  // Create a mutable copy to avoid modifying the original object
+  const dataToUpdate: { [key: string]: any } = { ...profileData };
+
+  // If the displayName is part of the update, also update the lowercase version
+  if (profileData.displayName) {
+    dataToUpdate.displayName_lowercase = profileData.displayName.toLowerCase();
+  }
+
+  try {
+    await updateDoc(userRef, dataToUpdate);
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    throw new Error('Failed to update user profile.');
   }
 } 

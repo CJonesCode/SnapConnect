@@ -2,56 +2,58 @@
 import '@expo/env';
 
 export default {
-  name: "TheMarketIndex",
-  slug: "TheMarketIndex",
-  version: "1.0.0",
-  orientation: "portrait",
-  icon: "./assets/images/logo.png",
-  scheme: "themarketindex",
-  userInterfaceStyle: "automatic",
+  name: 'TheMarketIndex',
+  slug: 'TheMarketIndex',
+  version: '1.0.0',
+  orientation: 'portrait',
+  icon: './assets/images/logo.png',
+  scheme: 'themarketindex',
+  userInterfaceStyle: 'automatic',
   splash: {
-    image: "./assets/images/logo.png",
-    resizeMode: "contain",
-    backgroundColor: "#ffffff",
+    image: './assets/images/logo.png',
+    resizeMode: 'contain',
+    backgroundColor: '#ffffff',
     dark: {
-      backgroundColor: "#121212",
+      backgroundColor: '#121212',
     },
   },
   ios: {
     supportsTablet: true,
-    googleServicesFile: "./GoogleService-Info.plist",
-    bundleIdentifier: "com.anonymous.themarketindex"
+    googleServicesFile: './GoogleService-Info.plist',
+    bundleIdentifier: 'com.anonymous.themarketindex',
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/images/logo.png",
-      backgroundColor: "#121212",
+      foregroundImage: './assets/images/logo.png',
+      backgroundColor: '#121212',
     },
-    package: "com.anonymous.themarketindex",
-    googleServicesFile: "./google-services.json"
+    package: 'com.anonymous.themarketindex',
+    googleServicesFile: './google-services.json',
   },
   plugins: [
-    "expo-router",
-    "expo-notifications",
-    "expo-secure-store",
+    'expo-router',
+    'expo-notifications',
+    'expo-secure-store',
     [
-      "expo-camera",
+      'expo-camera',
       {
-        "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera to take photos.",
-        "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone for video recording.",
-        "recordAudioAndroid": true
-      }
+        cameraPermission:
+          'Allow $(PRODUCT_NAME) to access your camera to take photos.',
+        microphonePermission:
+          'Allow $(PRODUCT_NAME) to access your microphone for video recording.',
+        recordAudioAndroid: true,
+      },
     ],
     [
-      "expo-build-properties",
+      'expo-build-properties',
       {
-        "android": {
-          "minSdkVersion": 23
-        }
-      }
-    ]
+        android: {
+          minSdkVersion: 23,
+        },
+      },
+    ],
   ],
   experiments: {
-    typedRoutes: true
+    typedRoutes: true,
   },
 };

@@ -1,152 +1,140 @@
 /**
- * This screen is presented modally to preview a captured photo.
- * It displays the photo and a list of friends to send the snap to.
+ * This modal screen is presented after a user takes a photo.
+ * It displays the photo and a list of friends to send the tip to.
+ * It also allows the user to add a stock ticker and a text analysis.
  */
 import React, { useState, useEffect } from 'react';
-import { View, Image, StyleSheet, SafeAreaView, FlatList, TouchableOpacity } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { View, Image, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { sendSnap } from '@/services/firebase/snapService';
+import { useUserStore } from '@/hooks/useUserStore';
+import { createTip } from '@/services/firebase/tipService';
 import { subscribeToFriends, UserProfile } from '@/services/firebase/userService';
-import { createStory } from '@/services/firebase/storyService';
-import { Button, IconButton, useTheme, List, ActivityIndicator, Text } from 'react-native-paper';
+import { Button, IconButton, useTheme, List, ActivityIndicator, Text, TextInput } from 'react-native-paper';
+import { logger } from '@/services/logging/logger';
+
+async function uploadMedia(uri: string): Promise<string> {
+  // This is a placeholder. In a real app, this would upload to Firebase Storage.
+  logger.info('Uploading media from URI (placeholder)', { uri });
+  return `https://placehold.co/600x400.png?text=Uploaded:${uri.slice(-10)}`;
+}
 
 export default function PhotoPreviewModal() {
-  const router = useRouter();
+  const navigation = useNavigation();
   const { user } = useAuth();
+  const { profile: userProfile } = useUserStore();
   const { uri } = useLocalSearchParams<{ uri: string }>();
   const theme = useTheme();
 
   const [friends, setFriends] = useState<UserProfile[]>([]);
-  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [selectedFriends, setSelectedFriends] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [isPostingStory, setIsPostingStory] = useState(false);
+  const [tip, setTip] = useState('');
+  const [ticker, setTicker] = useState('');
 
   useEffect(() => {
-    if (!user) return;
-    const unsubscribe = subscribeToFriends(user.uid, (fetchedFriends) => {
-      setFriends(fetchedFriends);
-      setIsLoading(false);
-    });
-    return () => unsubscribe();
+    if (user) {
+      const unsubscribe = subscribeToFriends(user.uid, (fetchedFriends) => {
+        setFriends(fetchedFriends);
+        setIsLoading(false);
+      });
+      return () => unsubscribe();
+    }
   }, [user]);
 
-  if (!uri) {
-    return null;
-  }
-
-  const handleDiscard = () => {
-    if (isSending) return;
-    router.back();
-  };
-
-  const toggleFriendSelection = (uid: string) => {
-    setSelectedFriends((currentSelected) =>
-      currentSelected.includes(uid)
-        ? currentSelected.filter((id) => id !== uid)
-        : [...currentSelected, uid]
-    );
-  };
-
   const handleSend = async () => {
-    if (!user || selectedFriends.length === 0) {
-      return;
-    }
+    if (!user || selectedFriends.length === 0 || !uri) return;
+
     setIsSending(true);
     try {
-      const sendPromises = selectedFriends.map((recipientId) =>
-        sendSnap(uri, user.uid, recipientId)
+      const mediaUrl = await uploadMedia(uri);
+      const sendPromises = selectedFriends.map((friend) =>
+        createTip(user.uid, friend.uid, mediaUrl, { tip, ticker })
       );
       await Promise.all(sendPromises);
-      router.back(); // Go back to the camera after sending
+      logger.info('Successfully sent tips to selected friends');
+      navigation.goBack();
     } catch (error) {
-      console.error('Failed to send one or more snaps:', error);
-      // Optionally, show an error message to the user
+      logger.error('Failed to send tips', { error });
+      Alert.alert('Error', 'Could not send your tip. Please try again.');
     } finally {
       setIsSending(false);
     }
   };
 
-  const handlePostStory = async () => {
-    if (!user) return;
-    setIsPostingStory(true);
-    try {
-      await createStory(uri, user.uid);
-      router.back(); // Go back to camera after posting
-    } catch (error) {
-      console.error('Failed to post story:', error);
-      // Optionally, show an error message
-    } finally {
-      setIsPostingStory(false);
-    }
-  };
-
-  const renderFriendItem = ({ item }: { item: UserProfile }) => {
-    const isSelected = selectedFriends.includes(item.uid);
-    return (
-      <TouchableOpacity onPress={() => toggleFriendSelection(item.uid)}>
-        <List.Item
-          title={item.displayName}
-          style={isSelected && { backgroundColor: theme.colors.surfaceVariant }}
-          left={(props) => (
-            <List.Icon
-              {...props}
-              icon={isSelected ? 'check-circle' : 'circle-outline'}
-            />
-          )}
-        />
-      </TouchableOpacity>
+  const toggleFriendSelection = (friend: UserProfile) => {
+    setSelectedFriends((currentSelected) =>
+      currentSelected.some((f) => f.uid === friend.uid)
+        ? currentSelected.filter((f) => f.uid !== friend.uid)
+        : [...currentSelected, friend]
     );
   };
 
+  if (!uri) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text>No photo found.</Text>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Image source={{ uri }} style={styles.image} resizeMode="contain" />
+    <SafeAreaView style={styles.container}>
+      <Image source={{ uri }} style={styles.previewImage} />
+      <IconButton icon="close" size={30} onPress={() => navigation.goBack()} style={styles.closeButton} />
 
-      <IconButton
-        icon="close"
-        size={30}
-        onPress={handleDiscard}
-        style={styles.closeButton}
-        iconColor={theme.colors.onBackground}
-        disabled={isSending || isPostingStory}
-      />
+      <View style={styles.contentContainer}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            label="Stock Ticker (e.g., AAPL)"
+            value={ticker}
+            onChangeText={setTicker}
+            style={styles.input}
+            mode="outlined"
+          />
+          <TextInput
+            label="Your Tip / Analysis"
+            value={tip}
+            onChangeText={setTip}
+            style={styles.input}
+            multiline
+            mode="outlined"
+          />
+        </View>
 
-      <View style={styles.bottomContainer}>
+        <Text style={styles.sendToText}>Send To:</Text>
         {isLoading ? (
-          <ActivityIndicator size="large" />
+          <ActivityIndicator animating={true} />
         ) : (
           <FlatList
             data={friends}
-            renderItem={renderFriendItem}
             keyExtractor={(item) => item.uid}
-            ListEmptyComponent={<Text style={styles.emptyText}>You have no friends to send this to.</Text>}
+            renderItem={({ item }) => {
+              const isSelected = selectedFriends.some((f) => f.uid === item.uid);
+              return (
+                <TouchableOpacity onPress={() => toggleFriendSelection(item)}>
+                  <List.Item
+                    title={item.displayName}
+                    description={item.uid}
+                    left={(props) => <List.Icon {...props} icon={isSelected ? 'check-circle' : 'circle-outline'} />}
+                  />
+                </TouchableOpacity>
+              );
+            }}
           />
         )}
-        <View style={styles.actionRow}>
-          <Button
-            mode="outlined"
-            icon="book-plus-multiple"
-            style={styles.actionButton}
-            onPress={handlePostStory}
-            loading={isPostingStory}
-            disabled={isSending || isPostingStory}
-          >
-            Story
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleSend}
-            icon="send"
-            style={styles.actionButton}
-            disabled={selectedFriends.length === 0 || isSending || isPostingStory}
-            loading={isSending}
-          >
-            {`Send (${selectedFriends.length})`}
-          </Button>
-        </View>
       </View>
+
+      <Button
+        mode="contained"
+        onPress={handleSend}
+        style={styles.sendButton}
+        disabled={isSending || selectedFriends.length === 0}
+        loading={isSending}
+      >
+        Send Tip
+      </Button>
     </SafeAreaView>
   );
 }
@@ -154,36 +142,37 @@ export default function PhotoPreviewModal() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000',
   },
-  image: {
-    flex: 0.6, // Take up 60% of the screen height
+  previewImage: {
+    width: '100%',
+    height: '50%',
+    resizeMode: 'contain',
   },
   closeButton: {
     position: 'absolute',
-    top: 50,
+    top: 40,
     left: 10,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  bottomContainer: {
-    flex: 0.4, // Take up remaining 40%
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  inputContainer: {
     paddingVertical: 10,
   },
-  actionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    padding: 10,
+  input: {
+    marginBottom: 10,
   },
-  actionButton: {
-    flex: 1,
-    marginHorizontal: 5,
+  sendToText: {
+    marginTop: 10,
+    marginBottom: 5,
+    fontWeight: 'bold',
+    color: '#fff',
+    fontSize: 16,
   },
   sendButton: {
-    margin: 20,
-    paddingVertical: 8,
+    margin: 16,
   },
-  emptyText: {
-    textAlign: 'center',
-    marginTop: 20,
-    fontStyle: 'italic',
-  }
 });

@@ -1,9 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
-import { Button, Checkbox, List, Text, TextInput, useTheme } from 'react-native-paper';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  SafeAreaView,
+} from 'react-native';
+import {
+  Button,
+  Checkbox,
+  List,
+  Text,
+  TextInput,
+  useTheme,
+} from 'react-native-paper';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { subscribeToFriends, UserProfile } from '@/services/firebase/userService';
+import {
+  subscribeToFriends,
+  UserProfile,
+} from '@/services/firebase/userService';
 import { createGroup } from '@/services/firebase/groupService';
 
 export default function GroupModal() {
@@ -24,7 +40,9 @@ export default function GroupModal() {
 
   const toggleFriendSelection = (uid: string) => {
     setSelectedFriends((current) =>
-      current.includes(uid) ? current.filter((id) => id !== uid) : [...current, uid]
+      current.includes(uid)
+        ? current.filter((id) => id !== uid)
+        : [...current, uid],
     );
   };
 
@@ -53,21 +71,27 @@ export default function GroupModal() {
       <TouchableOpacity onPress={() => toggleFriendSelection(item.uid)}>
         <List.Item
           title={item.displayName}
-          left={() => <Checkbox.Android status={isSelected ? 'checked' : 'unchecked'} />}
+          left={() => (
+            <Checkbox.Android status={isSelected ? 'checked' : 'unchecked'} />
+          )}
         />
       </TouchableOpacity>
     );
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
       <TextInput
         label="Group Name"
         value={groupName}
         onChangeText={setGroupName}
         style={styles.input}
       />
-      <Text variant="titleMedium" style={styles.header}>Select Friends</Text>
+      <Text variant="titleMedium" style={styles.header}>
+        Select Friends
+      </Text>
       <FlatList
         data={friends}
         renderItem={renderFriendItem}
@@ -78,7 +102,9 @@ export default function GroupModal() {
         mode="contained"
         onPress={handleCreateGroup}
         style={styles.button}
-        disabled={!groupName.trim() || selectedFriends.length === 0 || isCreating}
+        disabled={
+          !groupName.trim() || selectedFriends.length === 0 || isCreating
+        }
         loading={isCreating}
       >
         Create Group
@@ -105,4 +131,4 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingVertical: 8,
   },
-}); 
+});

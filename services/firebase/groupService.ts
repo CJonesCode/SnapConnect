@@ -34,7 +34,7 @@ export type Group = {
 export async function createGroup(
   name: string,
   memberIds: string[],
-  createdBy: string
+  createdBy: string,
 ): Promise<string> {
   if (!name.trim()) {
     throw new Error('Group name cannot be empty.');
@@ -67,7 +67,7 @@ export async function createGroup(
  */
 export function subscribeToGroups(
   userId: string,
-  onUpdate: (groups: Group[]) => void
+  onUpdate: (groups: Group[]) => void,
 ): () => void {
   const groupsRef = collection(db, 'groups');
   const q = query(groupsRef, where('members', 'array-contains', userId));
@@ -87,8 +87,8 @@ export function subscribeToGroups(
     (error) => {
       console.error('Error listening to groups:', error);
       onUpdate([]);
-    }
+    },
   );
 
   return unsubscribe;
-} 
+}

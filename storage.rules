@@ -2,11 +2,25 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Match any file in the bucket
+    // Media for Tips
+    match /tips/{userId}/{allPaths=**} {
+      // Only the authenticated user can upload to their own path.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Media for Signals
+    match /signals/{userId}/{allPaths=**} {
+      // Only the authenticated user can upload to their own path.
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Default Read Access: Allow any authenticated user to read all files.
+    // This is secure because the URLs are stored in Firestore, which has its
+    // own strict access controls. A user can't get a file URL unless they
+    // have permission to read the corresponding Firestore document.
     match /{allPaths=**} {
-      // Allow read and write access only to authenticated users.
-      // This is a secure default, preventing unauthorized access.
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if false; // Deny all other writes explicitly
     }
   }
 } 

@@ -1,8 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  SafeAreaView,
+} from 'react-native';
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { Message, subscribeToGroupMessages, sendMessageToGroup } from '@/services/firebase/messageService';
+import {
+  Message,
+  subscribeToGroupMessages,
+  sendMessageToGroup,
+} from '@/services/firebase/messageService';
 import { Button, Text, TextInput, useTheme } from 'react-native-paper';
 
 export default function GroupChatScreen() {
@@ -33,7 +44,10 @@ export default function GroupChatScreen() {
     const messageText = newMessage;
     setNewMessage('');
     try {
-      await sendMessageToGroup(groupId, { text: messageText, senderId: user.uid });
+      await sendMessageToGroup(groupId, {
+        text: messageText,
+        senderId: user.uid,
+      });
     } catch (error) {
       console.error('Failed to send message:', error);
       // Re-set the text input if sending fails
@@ -50,18 +64,22 @@ export default function GroupChatScreen() {
           isCurrentUser ? styles.currentUserBubble : styles.otherUserBubble,
         ]}
       >
-        <Text style={isCurrentUser ? styles.currentUserText : styles.otherUserText}>{item.text}</Text>
+        <Text
+          style={isCurrentUser ? styles.currentUserText : styles.otherUserText}
+        >
+          {item.text}
+        </Text>
       </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-    >
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
         <FlatList
           ref={flatListRef}
           data={messages}
@@ -76,11 +94,16 @@ export default function GroupChatScreen() {
             onChangeText={setNewMessage}
             placeholder="Type a message..."
           />
-          <Button mode="contained" onPress={handleSend} style={styles.sendButton} disabled={!newMessage.trim()}>
+          <Button
+            mode="contained"
+            onPress={handleSend}
+            style={styles.sendButton}
+            disabled={!newMessage.trim()}
+          >
             Send
           </Button>
         </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -129,4 +152,4 @@ const styles = StyleSheet.create({
   sendButton: {
     justifyContent: 'center',
   },
-}); 
+});

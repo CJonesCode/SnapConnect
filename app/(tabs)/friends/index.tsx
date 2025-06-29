@@ -31,7 +31,9 @@ export default function FriendsScreen() {
   const [sentRequests, setSentRequests] = useState<string[]>([]); // Track sent requests by UID
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friends, setFriends] = useState<UserProfile[]>([]);
-  const [isProcessingRequest, setIsProcessingRequest] = useState<string | null>(null);
+  const [isProcessingRequest, setIsProcessingRequest] = useState<string | null>(
+    null,
+  );
   const theme = useTheme();
 
   // Effect to subscribe to friend requests
@@ -67,7 +69,9 @@ export default function FriendsScreen() {
   const handleAddFriend = async (recipient: UserProfile) => {
     if (!user || !profile?.displayName) {
       // TODO: Show a user-friendly error
-      console.error('Could not send friend request: missing current user data.');
+      console.error(
+        'Could not send friend request: missing current user data.',
+      );
       return;
     }
 
@@ -164,8 +168,12 @@ export default function FriendsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Text variant="headlineSmall" style={styles.subHeader}>My Friends</Text>
+    <View
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    >
+      <Text variant="headlineSmall" style={styles.subHeader}>
+        My Friends
+      </Text>
       {friends.length > 0 ? (
         <FlatList
           data={friends}
@@ -271,4 +279,4 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     fontStyle: 'italic',
   },
-}); 
+});

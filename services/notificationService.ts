@@ -26,7 +26,9 @@ Notifications.setNotificationHandler({
  *
  * @returns The ExpoPushToken string, or null if permissions are denied or an error occurs.
  */
-export async function registerForPushNotificationsAsync(): Promise<string | null> {
+export async function registerForPushNotificationsAsync(): Promise<
+  string | null
+> {
   let token;
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
@@ -47,10 +49,10 @@ export async function registerForPushNotificationsAsync(): Promise<string | null
     alert('Failed to get push token for push notification!');
     return null;
   }
-  
+
   // TODO: Use the new getExpoPushTokenAsync method with a projectId
   token = (await Notifications.getExpoPushTokenAsync()).data;
   console.log('Expo Push Token:', token);
 
   return token;
-} 
+}

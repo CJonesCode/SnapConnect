@@ -6,7 +6,7 @@
 import { useEffect } from 'react';
 import { create } from 'zustand';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -102,17 +102,46 @@ export function useAuth() {
   const signUp = async ({ email, password, displayName }: SignUpCredentials) => {
     setLoading(true);
     setError(null);
+    if (!displayName) {
+      const err = new Error('Sign up validation failed: displayName is missing.');
+      logger.error('Sign up validation failed', err);
+      setError(err.message);
+      setLoading(false);
+      throw err;
+    }
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const { user } = userCredential;
-      await setDoc(doc(db, 'users', user.uid), {
-        uid: user.uid,
-        displayName,
-        email: user.email,
-        photoURL: '',
-        friends: [],
-        createdAt: serverTimestamp(),
+
+      // --- Create user and username docs in a transaction ---
+      const username = email.split('@')[0].toLowerCase();
+      const userDocRef = doc(db, 'users', user.uid);
+      const usernameDocRef = doc(db, 'usernames', username);
+
+      await runTransaction(db, async (transaction) => {
+        const usernameDoc = await transaction.get(usernameDocRef);
+        if (usernameDoc.exists()) {
+          // This error will be caught by the outer catch block
+          throw new Error('This username is already taken.');
+        }
+
+        // Define user data
+        const newUserProfile = {
+          uid: user.uid,
+          username,
+          displayName,
+          displayName_lowercase: displayName.toLowerCase(),
+          email,
+          photoURL: `https://i.pravatar.cc/150?u=${user.uid}`, // User-specific placeholder
+          friends: [],
+          createdAt: serverTimestamp(),
+        };
+
+        // Set the user and username documents
+        transaction.set(userDocRef, newUserProfile);
+        transaction.set(usernameDocRef, { uid: user.uid });
       });
+
       await fetchProfile(user.uid); // Fetch profile after creation
       setLoading(false);
       return userCredential;

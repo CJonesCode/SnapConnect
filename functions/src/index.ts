@@ -1,4 +1,3 @@
-/*
 import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import { Expo } from "expo-server-sdk";
@@ -8,24 +7,23 @@ admin.initializeApp();
 
 // Initialize Expo SDK
 const expo = new Expo();
-*/
 
 /*
 // --- PREMIUM REQUIRED: Push Notification Sender ---
-// The following Cloud Function sends a push notification when a new snap is
+// The following Cloud Function sends a push notification when a new tip is
 // created. Deploying functions requires the Firebase Blaze (pay-as-you-go) plan.
 // To re-enable, uncomment this function and deploy.
 
-export const onSnapCreate = functions.firestore
-  .document("snaps/{snapId}")
-  .onCreate(async (snap, context) => {
-    const snapData = snap.data();
-    if (!snapData) {
-      functions.logger.error("No data associated with the snap.");
+export const onTipCreate = functions.firestore
+  .document("tips/{tipId}")
+  .onCreate(async (tip, context) => {
+    const tipData = tip.data();
+    if (!tipData) {
+      functions.logger.error("No data associated with the tip.");
       return;
     }
 
-    const { recipientId, senderId } = snapData;
+    const { recipientId, senderId } = tipData;
 
     // Get the recipient's user document to find their push token
     const recipientDoc = await admin
@@ -63,9 +61,9 @@ export const onSnapCreate = functions.firestore
     const message = {
       to: token,
       sound: "default" as const,
-      title: "New Snap!",
-      body: `${senderName} sent you a snap.`,
-      data: { snapId: context.params.snapId },
+      title: "New Tip!",
+      body: `${senderName} sent you a tip.`,
+      data: { tipId: context.params.tipId },
     };
 
     // Send the notification
@@ -73,7 +71,7 @@ export const onSnapCreate = functions.firestore
       await expo.sendPushNotificationsAsync([message]);
       functions.logger.info("Push notification sent successfully.", {
         recipientId,
-        snapId: context.params.snapId,
+        tipId: context.params.tipId,
       });
     } catch (error) {
       functions.logger.error("Error sending push notification:", {
@@ -82,5 +80,36 @@ export const onSnapCreate = functions.firestore
       });
     }
   });
+
+*/
+
+/*
+// --- DATA CLEANUP: User Deletion Trigger ---
+// The following function automatically deletes a user's data from Firestore
+// and their files from Cloud Storage when their account is deleted from
+// Firebase Authentication. This requires the Blaze plan.
+
+export const onUserDelete = functions.auth.user().onDelete(async (user) => {
+  const { uid } = user;
+  const logger = functions.logger;
+
+  logger.info(`User ${uid} is being deleted. Cleaning up associated data.`);
+
+  // 1. Delete user's document in Firestore
+  const firestorePromise = admin.firestore().collection("users").doc(uid).delete();
+
+  // 2. Delete user's files in Cloud Storage
+  // This deletes all files in the user's dedicated folders for tips and signals.
+  const bucket = admin.storage().bucket();
+  const tipsPromise = bucket.deleteFiles({ prefix: `tips/${uid}` });
+  const signalsPromise = bucket.deleteFiles({ prefix: `signals/${uid}` });
+  
+  try {
+    await Promise.all([firestorePromise, tipsPromise, signalsPromise]);
+    logger.info(`Successfully cleaned up data for user ${uid}.`);
+  } catch (error) {
+    logger.error(`Error cleaning up data for user ${uid}:`, { error });
+  }
+});
 
 */ 

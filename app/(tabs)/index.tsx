@@ -5,14 +5,24 @@
  */
 import { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Linking } from 'react-native';
-import { CameraView, useCameraPermissions, PermissionStatus } from 'expo-camera';
+import {
+  CameraView,
+  useCameraPermissions,
+  PermissionStatus,
+} from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { Button, Text, useTheme, ActivityIndicator, IconButton } from 'react-native-paper';
+import {
+  Button,
+  Text,
+  useTheme,
+  ActivityIndicator,
+  IconButton,
+} from 'react-native-paper';
 import { logger } from '../../services/logging/logger';
 
 export default function CameraScreen() {
   logger.info('--- CameraScreen: Component rendering ---');
-  
+
   const [permission, requestPermission] = useCameraPermissions();
   const [facing, setFacing] = useState<'front' | 'back'>('back');
   const cameraRef = useRef<CameraView>(null);
@@ -44,9 +54,17 @@ export default function CameraScreen() {
   if (permission.status === PermissionStatus.UNDETERMINED) {
     logger.info('Render state: Waiting for permission resolution');
     return (
-      <View style={[styles.permissionContainer, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[
+          styles.permissionContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
         <ActivityIndicator animating={true} />
-        <Text variant="bodyMedium" style={{ color: theme.colors.onBackground, marginTop: 16 }}>
+        <Text
+          variant="bodyMedium"
+          style={{ color: theme.colors.onBackground, marginTop: 16 }}
+        >
           Requesting camera permission…
         </Text>
       </View>
@@ -56,14 +74,34 @@ export default function CameraScreen() {
   if (permission.status === PermissionStatus.DENIED) {
     logger.info('Render state: Permissions denied');
     return (
-      <View style={[styles.permissionContainer, { backgroundColor: theme.colors.background }]}>
-        <Text variant="titleLarge" style={{ color: theme.colors.onBackground, textAlign: 'center' }}>
+      <View
+        style={[
+          styles.permissionContainer,
+          { backgroundColor: theme.colors.background },
+        ]}
+      >
+        <Text
+          variant="titleLarge"
+          style={{ color: theme.colors.onBackground, textAlign: 'center' }}
+        >
           You have denied camera access.
         </Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.onBackground, textAlign: 'center', marginTop: 8 }}>
-          To use the camera, you need to enable permission in your phone's settings.
+        <Text
+          variant="bodyMedium"
+          style={{
+            color: theme.colors.onBackground,
+            textAlign: 'center',
+            marginTop: 8,
+          }}
+        >
+          To use the camera, you need to enable permission in your phone's
+          settings.
         </Text>
-        <Button mode="contained" onPress={() => Linking.openSettings()} style={styles.permissionButton}>
+        <Button
+          mode="contained"
+          onPress={() => Linking.openSettings()}
+          style={styles.permissionButton}
+        >
           Open Settings
         </Button>
       </View>
@@ -72,7 +110,7 @@ export default function CameraScreen() {
 
   function toggleCameraFacing() {
     logger.info(`toggleCameraFacing: Current facing: ${facing}. Toggling...`);
-    setFacing(current => (current === 'back' ? 'front' : 'back'));
+    setFacing((current) => (current === 'back' ? 'front' : 'back'));
   }
 
   async function takePicture() {
@@ -87,7 +125,7 @@ export default function CameraScreen() {
           params: { uri: photo.uri },
         });
       } catch (error) {
-        logger.error("takePicture: Failed to take picture", { error });
+        logger.error('takePicture: Failed to take picture', { error });
       }
     } else {
       logger.warn('takePicture: Camera ref is not available.');
@@ -103,7 +141,9 @@ export default function CameraScreen() {
         ref={cameraRef}
         active={isCameraActive}
         onCameraReady={() => logger.info('EVENT: onCameraReady fired!')}
-        onMountError={(e) => logger.error('Camera mount error', { message: e.message })}
+        onMountError={(e) =>
+          logger.error('Camera mount error', { message: e.message })
+        }
       />
       <View style={styles.controlsContainer}>
         <IconButton

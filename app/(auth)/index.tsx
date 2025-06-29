@@ -4,12 +4,25 @@
  * using react-hook-form for form management and Zod for validation.
  */
 import React, { useState } from 'react';
-import { View, KeyboardAvoidingView, Platform, Image, StyleSheet, Pressable } from 'react-native';
+import {
+  View,
+  KeyboardAvoidingView,
+  Platform,
+  Image,
+  StyleSheet,
+  Pressable,
+} from 'react-native';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
-import { TextInput, Button, Text, useTheme, HelperText } from 'react-native-paper';
+import {
+  TextInput,
+  Button,
+  Text,
+  useTheme,
+  HelperText,
+} from 'react-native-paper';
 
 // Define the shape of the form data for type safety and validation
 export type SignUpCredentials = z.infer<typeof validationSchema>;
@@ -18,41 +31,45 @@ const validationSchema = z
   .object({
     email: z.string().email('Please enter a valid email address.'),
     password: z.string().min(8, 'Password must be at least 8 characters long.'),
-    displayName: z.string().min(3, 'Display name must be at least 3 characters.').optional(),
+    displayName: z.string().optional(),
     confirmPassword: z.string().optional(),
   })
-  .refine(
-    (data) => {
-      // If displayName is present, it must be a string of at least 3 chars.
-      // This is for the sign-up case.
-      if (data.displayName !== undefined) {
-        return typeof data.displayName === 'string' && data.displayName.length >= 3;
+  .superRefine((data, ctx) => {
+    // We infer the user is signing up if they have started typing a display name.
+    if (data.displayName && data.displayName.length > 0) {
+      // In this block, TypeScript knows displayName is a string.
+
+      // 1. Validate displayName length.
+      if (data.displayName.length < 3) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.too_small,
+          minimum: 3,
+          type: 'string',
+          inclusive: true,
+          message: 'Display name must be at least 3 characters.',
+          path: ['displayName'],
+        });
       }
-      return true;
-    },
-    {
-      message: 'Display name must be at least 3 characters.',
-      path: ['displayName'],
-    }
-  )
-  .refine(
-    (data) => {
-      // If confirmPassword is provided, it must match password.
-      // This is for the sign-up case.
-      if (data.confirmPassword !== undefined) {
-        return data.password === data.confirmPassword;
+
+      // 2. Validate that passwords match
+      if (data.password !== data.confirmPassword) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Passwords do not match',
+          path: ['confirmPassword'],
+        });
       }
-      return true;
-    },
-    {
-      message: 'Passwords do not match',
-      path: ['confirmPassword'],
     }
-  );
+  });
 
 export default function LoginScreen() {
   const [isSignUp, setIsSignUp] = useState(false);
-  const { control, handleSubmit, formState: { errors }, setError } = useForm<SignUpCredentials>({
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+    setError,
+  } = useForm<SignUpCredentials>({
     resolver: zodResolver(validationSchema),
     defaultValues: {
       email: '',
@@ -92,10 +109,12 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.keyboardAvoidingView}
     >
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <View
+        style={[styles.container, { backgroundColor: theme.colors.background }]}
+      >
         <Image
           source={require('../../assets/images/logo.png')}
           style={styles.logo}
@@ -203,7 +222,9 @@ export default function LoginScreen() {
 
         <Pressable onPress={toggleFormType} style={styles.toggleButton}>
           <Text style={{ color: theme.colors.primary }}>
-            {isSignUp ? 'Already have an account? Login' : "Don't have an account? Sign Up"}
+            {isSignUp
+              ? 'Already have an account? Login'
+              : "Don't have an account? Sign Up"}
           </Text>
         </Pressable>
       </View>
@@ -244,4 +265,4 @@ const styles = StyleSheet.create({
   toggleButton: {
     marginTop: 24,
   },
-}); 
+});

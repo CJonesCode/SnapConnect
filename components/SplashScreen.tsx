@@ -17,7 +17,9 @@ export function SplashScreen() {
         className="w-36 h-36 mb-5"
         resizeMode="contain"
       />
-      <Text className="text-2xl font-bold text-text dark:text-dark-text">TheMarketIndex</Text>
+      <Text className="text-2xl font-bold text-text dark:text-dark-text">
+        TheMarketIndex
+      </Text>
     </View>
   );
-} 
+}

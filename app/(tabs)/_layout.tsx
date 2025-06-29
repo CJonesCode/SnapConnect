@@ -29,7 +29,8 @@ export default function TabLayout() {
         headerTitleStyle: {
           color: theme.colors.onSurface,
         },
-      }}>
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -55,7 +56,9 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: 'Chat',
-          tabBarIcon: ({ color }) => <TabBarIcon name="comment" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="comment" color={color} />
+          ),
         }}
       />
       <Tabs.Screen

@@ -30,7 +30,7 @@ export type Message = {
  */
 export async function sendMessageToGroup(
   groupId: string,
-  message: { text: string; senderId: string }
+  message: { text: string; senderId: string },
 ): Promise<void> {
   if (!message.text.trim()) {
     throw new Error('Message text cannot be empty.');
@@ -57,7 +57,7 @@ export async function sendMessageToGroup(
  */
 export function subscribeToGroupMessages(
   groupId: string,
-  onUpdate: (messages: Message[]) => void
+  onUpdate: (messages: Message[]) => void,
 ): () => void {
   const messagesRef = collection(db, 'groups', groupId, 'messages');
   const q = query(messagesRef, orderBy('createdAt', 'asc'));
@@ -77,8 +77,8 @@ export function subscribeToGroupMessages(
     (error) => {
       console.error('Error listening to group messages:', error);
       onUpdate([]);
-    }
+    },
   );
 
   return unsubscribe;
-} 
+}

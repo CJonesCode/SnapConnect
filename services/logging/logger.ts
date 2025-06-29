@@ -17,12 +17,18 @@ type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
  */
 function log(level: LogLevel, message: string, data?: object) {
   const timestamp = new Date().toISOString();
-  console.log(JSON.stringify({
-    timestamp,
-    level,
-    message,
-    ...data,
-  }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        timestamp,
+        level,
+        message,
+        ...data,
+      },
+      null,
+      2,
+    ),
+  );
 }
 
 export const logger = {
@@ -53,4 +59,4 @@ export const logger = {
    * @param data - Optional data object.
    */
   debug: (message: string, data?: object) => log('DEBUG', message, data),
-}; 
+};
