@@ -20,11 +20,6 @@ export function AuthAwareCamera() {
   const { user, isInitialized } = useAuth();
   const theme = useTheme();
 
-  logger.info('AuthAwareCamera: Render check', { 
-    isInitialized, 
-    authenticated: !!user 
-  });
-
   // Still initializing auth state
   if (!isInitialized) {
     return (
@@ -44,7 +39,7 @@ export function AuthAwareCamera() {
   // User not authenticated - this shouldn't happen due to AuthGuard, 
   // but adding as safety net
   if (!user) {
-    logger.warn('AuthAwareCamera: User not authenticated - this should not happen');
+    logger.warn('AuthAwareCamera: User not authenticated');
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Text variant="bodyMedium" style={{ 
@@ -58,7 +53,6 @@ export function AuthAwareCamera() {
   }
 
   // User is authenticated and auth is initialized - safe to render camera
-  logger.info('AuthAwareCamera: Rendering camera for authenticated user');
   return <CameraScreen />;
 }
 

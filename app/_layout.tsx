@@ -8,7 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/services/logging/logger';
 import { SplashScreen as CustomSplashScreen } from '@/components/SplashScreen';
 import { AuthGuard } from '@/components/AuthGuard';
-import { PaperProvider } from 'react-native-paper';
+import { PaperProvider, useTheme } from 'react-native-paper';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -25,12 +25,13 @@ SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
   const { isInitialized } = useAuth();
+  const theme = useTheme();
 
   useEffect(() => {
     if (isInitialized) {
       // Hide the splash screen now that we have an auth state.
       SplashScreen.hideAsync();
-      logger.info('Auth state resolved - splash screen hidden');
+      logger.info('App: Splash screen hidden');
     }
   }, [isInitialized]);
 
@@ -42,7 +43,17 @@ function RootLayoutNav() {
   return (
     <PaperProvider>
       <AuthGuard>
-        <Stack>
+        <Stack
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: '#2c2830', // React Native Paper elevation.level2 color
+            },
+            headerTitleStyle: {
+              color: '#e7e1e5', // React Native Paper onSurface color
+            },
+            headerTintColor: '#e7e1e5', // React Native Paper onSurface color
+          }}
+        >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen 
@@ -50,8 +61,20 @@ function RootLayoutNav() {
             options={{ 
               presentation: 'modal',
               title: 'Create Tip',
-              headerStyle: { backgroundColor: '#000' },
-              headerTintColor: '#fff'
+            }} 
+          />
+          <Stack.Screen 
+            name="user-profile" 
+            options={{
+              title: 'User Profile',
+              headerBackTitle: 'Back',
+            }} 
+          />
+          <Stack.Screen 
+            name="group-modal" 
+            options={{
+              title: 'Create Group',
+              presentation: 'modal',
             }} 
           />
         </Stack>

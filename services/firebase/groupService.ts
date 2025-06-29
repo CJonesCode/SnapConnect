@@ -11,6 +11,7 @@ import {
   onSnapshot,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
+import { registerListener } from './listenerManager';
 
 /**
  * Represents the structure of a Group document in Firestore.
@@ -90,5 +91,5 @@ export function subscribeToGroups(
     },
   );
 
-  return unsubscribe;
+  return registerListener(unsubscribe);
 }

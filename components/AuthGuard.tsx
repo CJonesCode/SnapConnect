@@ -28,34 +28,27 @@ export function AuthGuard({ children }: AuthGuardProps) {
     const inAuthGroup = segments[0] === '(auth)';
     const inTabsGroup = segments[0] === '(tabs)';
     const inModal = segments[0] === 'modal';
+    const inUserProfile = segments[0] === 'user-profile';
+    const inGroupModal = segments[0] === 'group-modal';
 
-    logger.info('AuthGuard: Navigation check', { 
-      authenticated: !!user, 
-      inAuthGroup, 
-      inTabsGroup,
-      inModal,
-      segments
-    });
+    logger.info(`AuthGuard: ${user ? 'authenticated' : 'unauthenticated'} user on ${segments.join('/')}`);
 
     if (user && inAuthGroup) {
       // User is authenticated but in auth screens, navigate to main app
-      logger.info('AuthGuard: Navigating authenticated user to tabs');
+      logger.info('AuthGuard: Redirecting authenticated user to tabs');
       router.replace('/(tabs)');
     } else if (!user && inTabsGroup) {
       // User is not authenticated but in main app, navigate to auth
-      logger.info('AuthGuard: Navigating unauthenticated user to auth');
+      logger.info('AuthGuard: Redirecting unauthenticated user to auth');
       router.replace('/(auth)');
-    } else if (!user && !inAuthGroup && !inTabsGroup && !inModal) {
-      // Initial load for unauthenticated user (but not in modal)
+    } else if (!user && !inAuthGroup && !inTabsGroup && !inModal && !inUserProfile && !inGroupModal) {
+      // Initial load for unauthenticated user
       logger.info('AuthGuard: Initial navigation to auth');
       router.replace('/(auth)');
-    } else if (user && !inAuthGroup && !inTabsGroup && !inModal) {
-      // Initial load for authenticated user (but not in modal)
+    } else if (user && !inAuthGroup && !inTabsGroup && !inModal && !inUserProfile && !inGroupModal) {
+      // Initial load for authenticated user
       logger.info('AuthGuard: Initial navigation to tabs');
       router.replace('/(tabs)');
-    } else if (inModal) {
-      // Modal is open - don't interfere with modal navigation
-      logger.info('AuthGuard: Modal open, no navigation needed');
     }
   }, [user, isInitialized, segments, router]);
 

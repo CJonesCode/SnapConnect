@@ -7,6 +7,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   doc,
   addDoc,
   serverTimestamp,
@@ -21,6 +22,7 @@ import {
   limit,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
+import { registerListener } from './listenerManager';
 
 /**
  * Represents the structure of a public user profile document in Firestore.
@@ -112,6 +114,34 @@ export async function searchUsers(searchText: string): Promise<UserProfile[]> {
 }
 
 /**
+ * Gets a user profile by UID.
+ * @param uid - The UID of the user to fetch.
+ * @returns A promise that resolves to the user profile or null if not found.
+ */
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  try {
+    const userRef = doc(db, 'users', uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      return {
+        uid: userSnap.id,
+        username: data.username,
+        displayName: data.displayName,
+        displayName_lowercase: data.displayName_lowercase,
+        photoURL: data.photoURL,
+      } as UserProfile;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
+  }
+}
+
+/**
  * Creates a composite ID for a friendship document.
  * @param uid1 The first user's UID.
  * @param uid2 The second user's UID.
@@ -178,11 +208,16 @@ export function subscribeToFriendRequests(
       onNext(requests);
     },
     (error) => {
+      // If it's a permission error during logout, just log it and don't throw
+      if (error.code === 'permission-denied') {
+        console.log('Friend requests listener: Permission denied (user likely logged out)');
+        return;
+      }
       console.error('Error listening to friend requests:', error);
     }
   );
 
-  return unsubscribe;
+  return registerListener(unsubscribe);
 }
 
 /**
@@ -212,6 +247,27 @@ export async function declineFriendRequest(request: Friendship): Promise<void> {
   } catch (error) {
     console.error('Error declining friend request:', error);
     throw new Error('Failed to decline friend request.');
+  }
+}
+
+/**
+ * Removes a friend by deleting the friendship document.
+ * @param currentUserId - The UID of the current user.
+ * @param friendUserId - The UID of the friend to remove.
+ */
+export async function removeFriend(currentUserId: string, friendUserId: string): Promise<void> {
+  if (currentUserId === friendUserId) {
+    throw new Error('You cannot remove yourself as a friend.');
+  }
+  
+  const friendshipId = createFriendshipId(currentUserId, friendUserId);
+  const friendshipRef = doc(db, 'friendships', friendshipId);
+  
+  try {
+    await deleteDoc(friendshipRef);
+  } catch (error) {
+    console.error('Error removing friend:', error);
+    throw new Error('Failed to remove friend.');
   }
 }
 
@@ -262,9 +318,16 @@ export function subscribeToFriends(
       console.error('Error fetching friend profiles:', error);
       onUpdate([]);
     }
+  }, (error) => {
+    // If it's a permission error during logout, just log it and don't throw
+    if (error.code === 'permission-denied') {
+      console.log('Friends listener: Permission denied (user likely logged out)');
+      return;
+    }
+    console.error('Error listening to friends:', error);
   });
 
-  return unsubscribe;
+  return registerListener(unsubscribe);
 }
 
 /**

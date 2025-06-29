@@ -17,6 +17,7 @@ import {
 } from 'firebase/auth';
 import { auth, db } from '@/services/firebase/firebaseConfig';
 import { logger } from '@/services/logging/logger';
+import { cleanupAllListeners } from '@/services/firebase/listenerManager';
 import { useUserStore, UserProfile } from './useUserStore';
 import {
   savePushToken,
@@ -60,13 +61,13 @@ const useAuthStore = create<AuthState>((set, get) => ({
   init: () => {
     // Only create one global listener
     if (globalAuthUnsubscribe) {
-      logger.info('Auth store init: Reusing existing listener');
+      logger.info('Auth: Reusing existing listener');
       return globalAuthUnsubscribe; // Already confirmed to exist in the if condition
     }
     
-    logger.info('Auth store init: Setting up onAuthStateChanged listener...');
+    logger.info('Auth: Setting up auth state listener');
     globalAuthUnsubscribe = onAuthStateChanged(auth, async (user) => {
-      logger.info('onAuthStateChanged triggered.');
+      logger.info(`Auth: State changed - ${user ? 'signed in' : 'signed out'}`);
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
         const docSnap = await getDoc(userDocRef);
@@ -75,19 +76,19 @@ const useAuthStore = create<AuthState>((set, get) => ({
           const userData = docSnap.data();
           // Correctly set the profile in useUserStore
           useUserStore.setState({ profile: userData as UserProfile });
-          logger.info('User profile loaded.', { uid: user.uid });
+          logger.info(`Auth: Profile loaded for ${userData.displayName || user.uid}`);
 
           const token = get().pushToken;
           if (token) {
             await savePushToken(user.uid, token);
           }
         } else {
-          logger.warn('User document not found in Firestore.', { uid: user.uid });
+          logger.warn(`Auth: User document not found for ${user.uid}`);
           useUserStore.setState({ profile: null });
         }
         set({ user, isInitialized: true, isAuthenticated: true, isLoading: false });
       } else {
-        logger.info('User is not authenticated.');
+        logger.info('Auth: User signed out, clearing profile');
         useUserStore.setState({ profile: null });
         set({ user: null, isInitialized: true, isAuthenticated: false, isLoading: false });
       }
@@ -215,8 +216,14 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
-      await firebaseSignOut(auth);
+      // Clean up all Firestore listeners immediately
+      cleanupAllListeners();
+      
+      // Clear user profile to trigger component state updates
       useUserStore.getState().clearProfile();
+      
+      // Sign out from Firebase
+      await firebaseSignOut(auth);
       setLoading(false);
     } catch (error: any) {
       logger.error('Sign out failed', error);

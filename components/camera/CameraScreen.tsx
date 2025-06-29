@@ -62,11 +62,11 @@ export default function CameraScreen() {
   // Automatically request permissions on first mount only
   useEffect(() => {
     if (!cameraPermission || cameraPermission.status === PermissionStatus.UNDETERMINED) {
-      logger.info('Auto requesting camera permission...');
+      logger.info('Camera: Requesting camera permission');
       requestCameraPermission();
     }
     if (!microphonePermission || microphonePermission.status === PermissionStatus.UNDETERMINED) {
-      logger.info('Auto requesting microphone permission...');
+      logger.info('Camera: Requesting microphone permission');
       requestMicrophonePermission();
     }
   }, []); // Remove dependencies to prevent re-requests
@@ -74,14 +74,12 @@ export default function CameraScreen() {
   // Set navigation ready state based on focus (don't reset camera ready)
   useEffect(() => {
     if (isFocused) {
-      logger.info('Camera screen focused');
       setIsNavReady(true);
     } else {
-      logger.info('Camera screen unfocused');
       setIsNavReady(false);
       // If we lose focus while recording, stop recording to prevent issues
       if (isRecording && cameraRef.current) {
-        logger.info('Camera screen unfocused while recording - stopping recording');
+        logger.info('Camera: Stopping recording - screen unfocused');
         cameraRef.current.stopRecording();
       }
     }
@@ -174,11 +172,10 @@ export default function CameraScreen() {
         mode="video"
         videoQuality={Platform.OS === 'android' ? '480p' : '720p'}
         onCameraReady={() => {
-          logger.info('EVENT: onCameraReady fired!');
+          logger.info('Camera: Ready');
           // Add a small delay to ensure camera is fully ready
           setTimeout(() => {
             setCameraReady(true);
-            logger.info('Camera marked as ready after timeout');
           }, 500);
         }}
         onMountError={(e) =>

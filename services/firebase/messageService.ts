@@ -11,6 +11,7 @@ import {
   orderBy,
 } from 'firebase/firestore';
 import { db } from './firebaseConfig';
+import { registerListener } from './listenerManager';
 
 /**
  * Represents the structure of a Message document in a group's `messages` subcollection.
@@ -80,5 +81,5 @@ export function subscribeToGroupMessages(
     },
   );
 
-  return unsubscribe;
+  return registerListener(unsubscribe);
 }
