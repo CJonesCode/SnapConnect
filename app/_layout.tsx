@@ -29,9 +29,8 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (isInitialized) {
-      // Hide the splash screen now that we have an auth state.
       SplashScreen.hideAsync();
-      logger.info('App: Splash screen hidden');
+      logger.info('Splash screen hidden');
     }
   }, [isInitialized]);
 

@@ -31,23 +31,21 @@ export function AuthGuard({ children }: AuthGuardProps) {
     const inUserProfile = segments[0] === 'user-profile';
     const inGroupModal = segments[0] === 'group-modal';
 
-    logger.info(`AuthGuard: ${user ? 'authenticated' : 'unauthenticated'} user on ${segments.join('/')}`);
-
     if (user && inAuthGroup) {
       // User is authenticated but in auth screens, navigate to main app
-      logger.info('AuthGuard: Redirecting authenticated user to tabs');
+      logger.info('Redirecting authenticated user to tabs');
       router.replace('/(tabs)');
     } else if (!user && inTabsGroup) {
       // User is not authenticated but in main app, navigate to auth
-      logger.info('AuthGuard: Redirecting unauthenticated user to auth');
+      logger.info('Redirecting unauthenticated user to auth');
       router.replace('/(auth)');
     } else if (!user && !inAuthGroup && !inTabsGroup && !inModal && !inUserProfile && !inGroupModal) {
       // Initial load for unauthenticated user
-      logger.info('AuthGuard: Initial navigation to auth');
+      logger.info('Initial navigation to auth');
       router.replace('/(auth)');
     } else if (user && !inAuthGroup && !inTabsGroup && !inModal && !inUserProfile && !inGroupModal) {
       // Initial load for authenticated user
-      logger.info('AuthGuard: Initial navigation to tabs');
+      logger.info('Initial navigation to tabs');
       router.replace('/(tabs)');
     }
   }, [user, isInitialized, segments, router]);

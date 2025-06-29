@@ -36,7 +36,7 @@ export type AuthState = {
   setPushToken: (token: string) => void;
 };
 
-// --- Global Auth Listener (Singleton) ---
+// --- Global Auth Listener ---
 let globalAuthUnsubscribe: (() => void) | null = null;
 
 // --- Zustand Store for Auth ---
@@ -59,41 +59,45 @@ const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   init: () => {
-    // Only create one global listener
+    // Clean up any existing listener first
     if (globalAuthUnsubscribe) {
-      logger.info('Auth: Reusing existing listener');
-      return globalAuthUnsubscribe; // Already confirmed to exist in the if condition
+      globalAuthUnsubscribe();
+      globalAuthUnsubscribe = null;
     }
     
-    logger.info('Auth: Setting up auth state listener');
+    logger.info('Setting up auth state listener');
+    
     globalAuthUnsubscribe = onAuthStateChanged(auth, async (user) => {
-      logger.info(`Auth: State changed - ${user ? 'signed in' : 'signed out'}`);
-      if (user) {
-        const userDocRef = doc(db, 'users', user.uid);
-        const docSnap = await getDoc(userDocRef);
+      try {
+        logger.info(`Auth state changed - ${user ? `signed in` : 'signed out'}`);
+        if (user) {
+          const userDocRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(userDocRef);
 
-        if (docSnap.exists()) {
-          const userData = docSnap.data();
-          // Correctly set the profile in useUserStore
-          useUserStore.setState({ profile: userData as UserProfile });
-          logger.info(`Auth: Profile loaded for ${userData.displayName || user.uid}`);
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            useUserStore.setState({ profile: userData as UserProfile });
+            logger.info(`Profile loaded for ${userData.displayName || user.uid}`);
 
-          const token = get().pushToken;
-          if (token) {
-            await savePushToken(user.uid, token);
+            const token = useAuthStore.getState().pushToken;
+            if (token) {
+              await savePushToken(user.uid, token);
+            }
+          } else {
+            logger.warn(`User document not found for ${user.uid}`);
+            useUserStore.setState({ profile: null });
           }
+          useAuthStore.setState({ user, isInitialized: true, isAuthenticated: true, isLoading: false });
         } else {
-          logger.warn(`Auth: User document not found for ${user.uid}`);
           useUserStore.setState({ profile: null });
+          useAuthStore.setState({ user: null, isInitialized: true, isAuthenticated: false, isLoading: false });
         }
-        set({ user, isInitialized: true, isAuthenticated: true, isLoading: false });
-      } else {
-        logger.info('Auth: User signed out, clearing profile');
-        useUserStore.setState({ profile: null });
-        set({ user: null, isInitialized: true, isAuthenticated: false, isLoading: false });
+      } catch (error) {
+        logger.error('Error in auth state change', { error: String(error) });
       }
     });
-    return globalAuthUnsubscribe!; // We know it's not null since we just assigned it
+    
+    return globalAuthUnsubscribe;
   },
 }));
 
@@ -182,8 +186,7 @@ export function useAuth() {
       setLoading(false);
       return userCredential;
     } catch (error: any) {
-      logger.error('Sign in failed', { code: error.code, message: error.message });
-      // To prevent user enumeration attacks, always return a generic error message.
+      logger.error('Sign in failed', { code: error.code });
       setError('Invalid email or password.');
       setLoading(false);
     }
@@ -216,17 +219,21 @@ export function useAuth() {
     setLoading(true);
     setError(null);
     try {
+      logger.info('Starting logout process');
+      
       // Clean up all Firestore listeners immediately
       cleanupAllListeners();
       
       // Clear user profile to trigger component state updates
       useUserStore.getState().clearProfile();
       
-      // Sign out from Firebase
+      // Sign out from Firebase (this will trigger onAuthStateChanged)
       await firebaseSignOut(auth);
+      
+      logger.info('Logout completed successfully');
       setLoading(false);
     } catch (error: any) {
-      logger.error('Sign out failed', error);
+      logger.error('Logout failed', { error: String(error) });
       setError('Failed to sign out. Please try again.');
       setLoading(false);
     }

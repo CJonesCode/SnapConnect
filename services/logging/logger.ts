@@ -16,19 +16,23 @@ type LogLevel = 'INFO' | 'WARN' | 'ERROR' | 'DEBUG';
  * @param data - Optional structured data to include with the log.
  */
 function log(level: LogLevel, message: string, data?: object) {
-  const timestamp = new Date().toISOString();
-  console.log(
-    JSON.stringify(
-      {
-        timestamp,
-        level,
-        message,
-        ...data,
-      },
-      null,
-      2,
-    ),
-  );
+  const timestamp = new Date().toLocaleTimeString('en-US', { 
+    hour12: true, 
+    hour: 'numeric', 
+    minute: '2-digit', 
+    second: '2-digit' 
+  });
+  let logMessage = `${timestamp} [${level}] ${message}`;
+  
+  // If data is provided, format it cleanly
+  if (data && Object.keys(data).length > 0) {
+    const dataStr = Object.entries(data)
+      .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
+      .join(', ');
+    logMessage += ` | ${dataStr}`;
+  }
+  
+  console.log(logMessage);
 }
 
 export const logger = {
