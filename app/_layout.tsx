@@ -1,12 +1,13 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import 'react-native-reanimated';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/services/logging/logger';
 import { SplashScreen as CustomSplashScreen } from '@/components/SplashScreen';
+import { AuthGuard } from '@/components/AuthGuard';
 import { PaperProvider } from 'react-native-paper';
 
 export {
@@ -16,25 +17,22 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: undefined, // Let AuthGuard handle initial routing
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const { user, isInitialized } = useAuth();
-  const router = useRouter();
+  const { isInitialized } = useAuth();
 
   useEffect(() => {
     if (isInitialized) {
       // Hide the splash screen now that we have an auth state.
       SplashScreen.hideAsync();
-      const targetRoute = user ? '/(tabs)' : '/(auth)';
-      logger.info('Auth state resolved, navigating.', { targetRoute });
-      router.replace(targetRoute);
+      logger.info('Auth state resolved - splash screen hidden');
     }
-  }, [user, isInitialized, router]);
+  }, [isInitialized]);
 
   if (!isInitialized) {
     // While determining auth state, show our custom splash screen.
@@ -43,11 +41,21 @@ function RootLayoutNav() {
 
   return (
     <PaperProvider>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
+      <AuthGuard>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="modal" 
+            options={{ 
+              presentation: 'modal',
+              title: 'Create Tip',
+              headerStyle: { backgroundColor: '#000' },
+              headerTintColor: '#fff'
+            }} 
+          />
+        </Stack>
+      </AuthGuard>
     </PaperProvider>
   );
 }

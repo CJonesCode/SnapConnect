@@ -1,12 +1,14 @@
 /**
  * ShutterBar component for camera capture controls.
  * 
- * Provides photo capture on press and video recording on long press,
- * with visual feedback for recording state.
+ * Simple gesture-based interface:
+ * - Tap: Take photo
+ * - Long press: Record video
+ * - Tap while recording: Stop recording
  */
 import React, { RefObject } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { IconButton, SegmentedButtons } from 'react-native-paper';
+import { IconButton } from 'react-native-paper';
 import { CameraView } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useCameraStore } from '@/hooks/useCameraStore';
@@ -15,6 +17,7 @@ import { logger } from '@/services/logging/logger';
 interface ShutterBarProps {
   cameraRef: RefObject<CameraView | null>;
   disabled?: boolean;
+  hasAllPermissions?: boolean;
 }
 
 /**
@@ -23,12 +26,14 @@ interface ShutterBarProps {
  * @param {ShutterBarProps} props - Component props
  * @returns The rendered ShutterBar component
  */
-export default function ShutterBar({ cameraRef, disabled = false }: ShutterBarProps) {
+export default function ShutterBar({ 
+  cameraRef, 
+  disabled = false, 
+  hasAllPermissions = true 
+}: ShutterBarProps) {
   const router = useRouter();
   const { 
-    mode,
     isRecording, 
-    setMode,
     setIsRecording, 
     setPhotoUri, 
     setVideoUri 
@@ -43,15 +48,11 @@ export default function ShutterBar({ cameraRef, disabled = false }: ShutterBarPr
     logger.info('takePicture: Attempting to take picture...');
     
     if (cameraRef.current) {
-      logger.info('takePicture: Camera ref is available.');
       try {
         const photo = await cameraRef.current.takePictureAsync();
         logger.info(`takePicture: Success. Photo URI: ${photo.uri}`);
         setPhotoUri(photo.uri);
-        router.push({
-          pathname: '/modal',
-          params: { uri: photo.uri, type: 'photo' },
-        });
+        router.push('/modal');
       } catch (error) {
         logger.error('takePicture: Failed to take picture', { error });
       }
@@ -61,115 +62,82 @@ export default function ShutterBar({ cameraRef, disabled = false }: ShutterBarPr
   }
 
   /**
-   * Handles video recording start/stop when in video mode.
+   * Starts video recording on long press.
    */
-  async function toggleVideoRecording(): Promise<void> {
-    if (disabled) return;
+  async function startVideoRecording(): Promise<void> {
+    if (disabled || isRecording || !hasAllPermissions) return;
     
-    if (isRecording) {
-      // Stop recording
-      logger.info('toggleVideoRecording: Stopping video recording...');
-      if (cameraRef.current) {
-        cameraRef.current.stopRecording();
-      }
-    } else {
-      // Start recording
-      logger.info('toggleVideoRecording: Starting video recording...');
-      if (cameraRef.current) {
-        setIsRecording(true);
-        try {
-          const video = await cameraRef.current.recordAsync();
-          if (video) {
-            logger.info(`toggleVideoRecording: Success. Video URI: ${video.uri}`);
-            setVideoUri(video.uri);
-            router.push({
-              pathname: '/modal',
-              params: { uri: video.uri, type: 'video' },
-            });
-          } else {
-            logger.warn('toggleVideoRecording: Recording returned no video object.');
-          }
-        } catch (error) {
-          logger.error('toggleVideoRecording: Failed to record video', { error });
-        } finally {
-          setIsRecording(false);
-        }
-      } else {
-        logger.warn('toggleVideoRecording: Camera ref is not available.');
-      }
-    }
-  }
-
-  /**
-   * Handles starting video recording when the shutter button is long pressed in photo mode.
-   */
-  async function recordVideo(): Promise<void> {
-    if (disabled) return;
-    
-    logger.info('recordVideo: Long press detected, starting recording...');
+    logger.info('startVideoRecording: Starting video recording...');
     
     if (cameraRef.current) {
-      setIsRecording(true);
       try {
+        setIsRecording(true);
         const video = await cameraRef.current.recordAsync();
-        if (video) {
-          logger.info(`recordVideo: Success. Video URI: ${video.uri}`);
+        if (video?.uri) {
+          logger.info(`startVideoRecording: Video recorded successfully. URI: ${video.uri}`);
           setVideoUri(video.uri);
-          router.push({
-            pathname: '/modal',
-            params: { uri: video.uri, type: 'video' },
-          });
+          router.push('/modal');
         } else {
-          logger.warn('recordVideo: Recording returned no video object.');
+          logger.warn('startVideoRecording: No video URI returned');
         }
       } catch (error) {
-        logger.error('recordVideo: Failed to record video', { error });
+        logger.error('startVideoRecording: Failed to record video', { error });
       } finally {
         setIsRecording(false);
       }
-    } else {
-      logger.warn('recordVideo: Camera ref is not available.');
     }
   }
 
   /**
-   * Handles stopping video recording when the press is released.
+   * Stops video recording.
    */
   function stopVideoRecording(): void {
-    logger.info('stopVideoRecording: Press out detected, stopping recording...');
+    if (!isRecording) return;
     
-    if (cameraRef.current && isRecording) {
+    logger.info('stopVideoRecording: Stopping video recording...');
+    
+    if (cameraRef.current) {
       cameraRef.current.stopRecording();
     }
   }
 
+  /**
+   * Handles shutter button press - always takes photo unless recording.
+   */
+  function handleShutterPress(): void {
+    takePicture();
+  }
+
+  /**
+   * Handles long press to start video recording.
+   */
+  function handleShutterLongPress(): void {
+    startVideoRecording();
+  }
+
+  /**
+   * Gets the appropriate shutter icon based on recording state.
+   */
+  function getShutterIcon(): string {
+    if (isRecording) return 'stop';
+    return 'camera';
+  }
+
   return (
     <View style={styles.container}>
-      <View style={styles.modeSelector}>
-        <SegmentedButtons
-          value={mode}
-          onValueChange={(value) => setMode(value as 'photo' | 'video')}
-          buttons={[
-            { value: 'photo', label: 'Photo' },
-            { value: 'video', label: 'Video' },
-          ]}
-          style={styles.segmentedButtons}
-          density="small"
-        />
-      </View>
-      <View style={[
-        styles.shutterButtonOuter,
-        isRecording && styles.shutterButtonRecording,
-      ]}>
+      {/* Shutter button */}
+      <View style={styles.shutterContainer}>
         <IconButton
-          icon={mode === 'photo' ? 'camera' : (isRecording ? 'stop' : 'video')}
-          iconColor="white"
-          size={40}
-          onPress={mode === 'photo' ? takePicture : toggleVideoRecording}
-          onLongPress={mode === 'photo' ? recordVideo : undefined}
-          onPressOut={mode === 'photo' ? stopVideoRecording : undefined}
-          style={styles.shutterButtonInner}
+          icon={getShutterIcon()}
+          iconColor={isRecording ? '#ff4444' : '#ffffff'}
+          size={60}
+          onPress={isRecording ? stopVideoRecording : handleShutterPress}
+          onLongPress={handleShutterLongPress}
           disabled={disabled}
+          style={[
+            styles.shutterButton,
+            isRecording && styles.recordingButton,
+          ]}
         />
       </View>
     </View>
@@ -179,36 +147,22 @@ export default function ShutterBar({ cameraRef, disabled = false }: ShutterBarPr
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    bottom: 30,
+    bottom: 0,
     left: 0,
     right: 0,
-    justifyContent: 'center',
+    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  shutterContainer: {
     alignItems: 'center',
   },
-  modeSelector: {
-    marginBottom: 20,
-    paddingHorizontal: 20,
+  shutterButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderWidth: 3,
+    borderColor: '#ffffff',
   },
-  segmentedButtons: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  shutterButtonOuter: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 4,
-    borderColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  shutterButtonRecording: {
-    borderColor: 'red',
-    backgroundColor: 'red',
-  },
-  shutterButtonInner: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    margin: 0,
+  recordingButton: {
+    backgroundColor: 'rgba(255, 68, 68, 0.3)',
+    borderColor: '#ff4444',
   },
 }); 

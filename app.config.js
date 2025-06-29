@@ -29,6 +29,9 @@ export default {
     },
     package: 'com.anonymous.themarketindex',
     googleServicesFile: './google-services.json',
+    permissions: [
+      'android.permission.RECORD_AUDIO',
+    ],
   },
   plugins: [
     'expo-router',

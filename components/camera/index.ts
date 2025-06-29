@@ -6,5 +6,4 @@
  */
 export { default as CameraScreen } from './CameraScreen';
 export { default as TopBar } from './TopBar';
-export { default as ShutterBar } from './ShutterBar';
-export { default as PreviewScreen } from './PreviewScreen'; 
+export { default as ShutterBar } from './ShutterBar'; 

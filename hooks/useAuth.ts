@@ -35,6 +35,9 @@ export type AuthState = {
   setPushToken: (token: string) => void;
 };
 
+// --- Global Auth Listener (Singleton) ---
+let globalAuthUnsubscribe: (() => void) | null = null;
+
 // --- Zustand Store for Auth ---
 const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
@@ -55,8 +58,14 @@ const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   init: () => {
+    // Only create one global listener
+    if (globalAuthUnsubscribe) {
+      logger.info('Auth store init: Reusing existing listener');
+      return globalAuthUnsubscribe; // Already confirmed to exist in the if condition
+    }
+    
     logger.info('Auth store init: Setting up onAuthStateChanged listener...');
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    globalAuthUnsubscribe = onAuthStateChanged(auth, async (user) => {
       logger.info('onAuthStateChanged triggered.');
       if (user) {
         const userDocRef = doc(db, 'users', user.uid);
@@ -83,7 +92,7 @@ const useAuthStore = create<AuthState>((set, get) => ({
         set({ user: null, isInitialized: true, isAuthenticated: false, isLoading: false });
       }
     });
-    return unsubscribe;
+    return globalAuthUnsubscribe!; // We know it's not null since we just assigned it
   },
 }));
 

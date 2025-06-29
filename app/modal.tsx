@@ -8,6 +8,7 @@ import { View, Image, StyleSheet, SafeAreaView, FlatList, TouchableOpacity, Aler
 import { useLocalSearchParams, useNavigation } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserStore } from '@/hooks/useUserStore';
+import { useCameraStore } from '@/hooks/useCameraStore';
 import { createTip } from '@/services/firebase/tipService';
 import { subscribeToFriends, UserProfile } from '@/services/firebase/userService';
 import { Button, IconButton, useTheme, List, ActivityIndicator, Text, TextInput } from 'react-native-paper';
@@ -28,8 +29,20 @@ export default function PhotoPreviewModal() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { profile: userProfile } = useUserStore();
-  const { uri, type } = useLocalSearchParams<{ uri: string; type: 'photo' | 'video' }>();
+  const { resetMedia, photoUri, videoUri } = useCameraStore();
   const theme = useTheme();
+  
+  // Use camera store as primary source, fallback to route params
+  const uri = photoUri || videoUri;
+  const type = photoUri ? 'photo' : 'video';
+
+  // Debug logging
+  logger.info('PhotoPreviewModal: Opened with', { 
+    storePhotoUri: photoUri, 
+    storeVideoUri: videoUri, 
+    finalUri: uri, 
+    finalType: type 
+  });
 
   const [friends, setFriends] = useState<UserProfile[]>([]);
   const [selectedFriends, setSelectedFriends] = useState<UserProfile[]>([]);
@@ -45,6 +58,8 @@ export default function PhotoPreviewModal() {
         setIsLoading(false);
       });
       return () => unsubscribe();
+    } else {
+      setIsLoading(false);
     }
   }, [user]);
 
@@ -59,6 +74,8 @@ export default function PhotoPreviewModal() {
       );
       await Promise.all(sendPromises);
       logger.info('Successfully sent tips to selected friends');
+      // Reset camera state to clear preview and return to camera
+      resetMedia();
       navigation.goBack();
     } catch (error) {
       logger.error('Failed to send tips', { error });
@@ -77,6 +94,7 @@ export default function PhotoPreviewModal() {
   };
 
   if (!uri) {
+    logger.warn('PhotoPreviewModal: No URI provided, closing modal');
     return (
       <SafeAreaView style={styles.container}>
         <Text>No photo found.</Text>
@@ -97,7 +115,15 @@ export default function PhotoPreviewModal() {
       ) : (
         <Image source={{ uri }} style={styles.previewImage} resizeMode="contain" />
       )}
-      <IconButton icon="close" size={30} onPress={() => navigation.goBack()} style={styles.closeButton} />
+      <IconButton 
+        icon="close" 
+        size={30} 
+        onPress={() => {
+          resetMedia();
+          navigation.goBack();
+        }} 
+        style={styles.closeButton} 
+      />
 
       <View style={styles.contentContainer}>
         <View style={styles.inputContainer}>
@@ -137,6 +163,9 @@ export default function PhotoPreviewModal() {
                 </TouchableOpacity>
               );
             }}
+            maxToRenderPerBatch={10}
+            windowSize={5}
+            removeClippedSubviews={true}
           />
         )}
       </View>

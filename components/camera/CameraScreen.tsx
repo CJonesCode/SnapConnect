@@ -10,9 +10,10 @@ import { View, StyleSheet, Linking } from 'react-native';
 import { 
   CameraView, 
   useCameraPermissions, 
+  useMicrophonePermissions,
   PermissionStatus 
 } from 'expo-camera';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useFocusEffect } from '@react-navigation/native';
 import { 
   Button, 
   Text, 
@@ -23,7 +24,6 @@ import { useCameraStore } from '@/hooks/useCameraStore';
 import { logger } from '@/services/logging/logger';
 import TopBar from './TopBar';
 import ShutterBar from './ShutterBar';
-import PreviewScreen from './PreviewScreen';
 
 /**
  * CameraScreen renders the main camera interface with modular components.
@@ -31,63 +31,79 @@ import PreviewScreen from './PreviewScreen';
  * @returns The rendered CameraScreen component
  */
 export default function CameraScreen() {
-  logger.info('--- CameraScreen: Component rendering ---');
+  // Removed excessive render logging
 
-  const [permission, requestPermission] = useCameraPermissions();
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
   const [cameraReady, setCameraReady] = useState(false);
   const [isNavReady, setIsNavReady] = useState(false);
   
   const { 
     facing, 
     flash, 
-    showPreview, 
-    isRecording 
+    isRecording,
+    resetMedia 
   } = useCameraStore();
   
   const cameraRef = useRef<CameraView>(null);
   const theme = useTheme();
   const isFocused = useIsFocused();
   
-  const isCameraActive = isNavReady && isFocused && permission?.status === PermissionStatus.GRANTED;
-  const controlsDisabled = !cameraReady || isRecording;
+  const isCameraActive = isNavReady && isFocused && cameraPermission?.status === PermissionStatus.GRANTED;
+  const controlsDisabled = !cameraReady; // Don't disable during recording - need stop button!
 
-  logger.info(`Permission status: ${permission?.status}`);
+  // For video recording, we need both camera and microphone permissions
+  const hasAllPermissions = cameraPermission?.status === PermissionStatus.GRANTED && 
+                           microphonePermission?.status === PermissionStatus.GRANTED;
 
-  // Automatically request permission on first mount
+  // Note: Media reset is handled by the modal when it closes,
+  // so we don't need to reset here to avoid conflicts during navigation
+
+  // Automatically request permissions on first mount only
   useEffect(() => {
-    if (!permission || permission.status === PermissionStatus.UNDETERMINED) {
+    if (!cameraPermission || cameraPermission.status === PermissionStatus.UNDETERMINED) {
       logger.info('Auto requesting camera permission...');
-      requestPermission();
+      requestCameraPermission();
     }
-  }, [permission, requestPermission]);
+    if (!microphonePermission || microphonePermission.status === PermissionStatus.UNDETERMINED) {
+      logger.info('Auto requesting microphone permission...');
+      requestMicrophonePermission();
+    }
+  }, []); // Remove dependencies to prevent re-requests
 
-  // Delay camera rendering until navigation is ready
+  // Set navigation ready state based on focus (don't reset camera ready)
   useEffect(() => {
-    setIsNavReady(true);
-  }, []);
+    if (isFocused) {
+      logger.info('Camera screen focused');
+      setIsNavReady(true);
+    } else {
+      logger.info('Camera screen unfocused');
+      setIsNavReady(false);
+      // If we lose focus while recording, stop recording to prevent issues
+      if (isRecording && cameraRef.current) {
+        logger.info('Camera screen unfocused while recording - stopping recording');
+        cameraRef.current.stopRecording();
+      }
+    }
+  }, [isFocused, isRecording]);
 
   /**
    * Handles manual permission request when user clicks the button.
    */
   function handleRequestPermission(): void {
-    logger.info('handleRequestPermission: Requesting camera permission...');
-    requestPermission();
-  }
-
-  // Show preview screen if media was captured
-  if (showPreview) {
-    return <PreviewScreen />;
+    logger.info('handleRequestPermission: Requesting camera and microphone permissions...');
+    requestCameraPermission();
+    requestMicrophonePermission();
   }
 
   // Loading state
-  if (!permission) {
-    logger.info('Render state: Permissions loading');
+  if (!cameraPermission || !microphonePermission) {
     return <ActivityIndicator animating={true} style={styles.fullScreen} />;
   }
 
   // Waiting for permission resolution
-  if (permission.status === PermissionStatus.UNDETERMINED) {
-    logger.info('Render state: Waiting for permission resolution');
+  if (cameraPermission.status === PermissionStatus.UNDETERMINED || 
+      microphonePermission.status === PermissionStatus.UNDETERMINED) {
     return (
       <View style={[
         styles.permissionContainer,
@@ -101,15 +117,15 @@ export default function CameraScreen() {
             marginTop: 16 
           }}
         >
-          Requesting camera permission…
+          Requesting permissions…
         </Text>
       </View>
     );
   }
 
   // Permission denied state
-  if (permission.status === PermissionStatus.DENIED) {
-    logger.info('Render state: Permissions denied');
+  if (cameraPermission.status === PermissionStatus.DENIED || 
+      microphonePermission.status === PermissionStatus.DENIED) {
     return (
       <View style={[
         styles.permissionContainer,
@@ -122,7 +138,7 @@ export default function CameraScreen() {
             textAlign: 'center' 
           }}
         >
-          You have denied camera access.
+          Camera or microphone access denied.
         </Text>
         <Text
           variant="bodyMedium"
@@ -132,8 +148,8 @@ export default function CameraScreen() {
             marginTop: 8,
           }}
         >
-          To use the camera, you need to enable permission in your phone's
-          settings.
+          To use the camera and record videos, you need to enable both camera
+          and microphone permissions in your phone's settings.
         </Text>
         <Button
           mode="contained"
@@ -147,7 +163,6 @@ export default function CameraScreen() {
   }
 
   // Main camera interface
-  logger.info('Render state: Rendering CameraView');
   return (
     <View style={styles.container}>
       <CameraView
@@ -165,7 +180,11 @@ export default function CameraScreen() {
         }
       />
       <TopBar disabled={controlsDisabled} />
-      <ShutterBar cameraRef={cameraRef} disabled={controlsDisabled} />
+      <ShutterBar 
+        cameraRef={cameraRef} 
+        disabled={controlsDisabled}
+        hasAllPermissions={hasAllPermissions}
+      />
     </View>
   );
 }
