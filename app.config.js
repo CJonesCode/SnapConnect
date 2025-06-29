@@ -21,6 +21,10 @@ export default {
     supportsTablet: true,
     googleServicesFile: './GoogleService-Info.plist',
     bundleIdentifier: 'com.anonymous.themarketindex',
+    infoPlist: {
+      NSCameraUsageDescription: 'TheMarketIndex needs camera access to take photos and record videos for sharing market tips with friends.',
+      NSMicrophoneUsageDescription: 'TheMarketIndex needs microphone access to record audio with your market analysis videos.',
+    },
   },
   android: {
     adaptiveIcon: {
@@ -41,9 +45,9 @@ export default {
       'expo-camera',
       {
         cameraPermission:
-          'Allow $(PRODUCT_NAME) to access your camera to take photos.',
+          'TheMarketIndex needs camera access to take photos and record videos for sharing market tips with friends.',
         microphonePermission:
-          'Allow $(PRODUCT_NAME) to access your microphone for video recording.',
+          'TheMarketIndex needs microphone access to record audio with your market analysis videos.',
         recordAudioAndroid: true,
       },
     ],
