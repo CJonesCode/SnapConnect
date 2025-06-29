@@ -5,21 +5,39 @@
  * logo and name. It is displayed while the app performs its initial loading,
  * such as fetching authentication state and loading assets.
  */
-import { Image, Text, View } from 'react-native';
-
-const LOGO_PATH = '../assets/images/logo.png';
+import { Image, StyleSheet, View } from 'react-native';
+import { Text, useTheme } from 'react-native-paper';
+import { AppAssets } from '@/constants/Assets';
 
 export function SplashScreen() {
+  const { colors } = useTheme();
+
   return (
-    <View className="flex-1 items-center justify-center bg-background dark:bg-dark-background">
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Image
-        source={require(LOGO_PATH)}
-        className="w-36 h-36 mb-5"
+        source={AppAssets.logo}
+        style={styles.logo}
         resizeMode="contain"
       />
-      <Text className="text-2xl font-bold text-text dark:text-dark-text">
+      <Text variant="headlineMedium" style={[styles.title, { color: colors.onBackground }]}>
         TheMarketIndex
       </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logo: {
+    width: 144, // w-36
+    height: 144, // h-36
+    marginBottom: 20, // mb-5
+  },
+  title: {
+    fontWeight: 'bold',
+  },
+});

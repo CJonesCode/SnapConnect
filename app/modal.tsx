@@ -12,18 +12,23 @@ import { createTip } from '@/services/firebase/tipService';
 import { subscribeToFriends, UserProfile } from '@/services/firebase/userService';
 import { Button, IconButton, useTheme, List, ActivityIndicator, Text, TextInput } from 'react-native-paper';
 import { logger } from '@/services/logging/logger';
+import { Video, ResizeMode } from 'expo-av';
 
-async function uploadMedia(uri: string): Promise<string> {
+async function uploadMedia(uri: string, type: 'photo' | 'video'): Promise<string> {
   // This is a placeholder. In a real app, this would upload to Firebase Storage.
-  logger.info('Uploading media from URI (placeholder)', { uri });
-  return `https://placehold.co/600x400.png?text=Uploaded:${uri.slice(-10)}`;
+  logger.info(`Uploading ${type} from URI (placeholder)`, { uri });
+  if (type === 'photo') {
+    return `https://placehold.co/600x400.png?text=Uploaded:${uri.slice(-10)}`;
+  } else {
+    return `https://placehold.co/600x400.png?text=Video:${uri.slice(-10)}`;
+  }
 }
 
 export default function PhotoPreviewModal() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { profile: userProfile } = useUserStore();
-  const { uri } = useLocalSearchParams<{ uri: string }>();
+  const { uri, type } = useLocalSearchParams<{ uri: string; type: 'photo' | 'video' }>();
   const theme = useTheme();
 
   const [friends, setFriends] = useState<UserProfile[]>([]);
@@ -44,11 +49,11 @@ export default function PhotoPreviewModal() {
   }, [user]);
 
   const handleSend = async () => {
-    if (!user || selectedFriends.length === 0 || !uri) return;
+    if (!user || selectedFriends.length === 0 || !uri || !type) return;
 
     setIsSending(true);
     try {
-      const mediaUrl = await uploadMedia(uri);
+      const mediaUrl = await uploadMedia(uri, type);
       const sendPromises = selectedFriends.map((friend) =>
         createTip(user.uid, friend.uid, mediaUrl, { tip, ticker })
       );
@@ -81,7 +86,17 @@ export default function PhotoPreviewModal() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Image source={{ uri }} style={styles.previewImage} />
+      {type === 'video' ? (
+        <Video
+          source={{ uri }}
+          style={styles.previewImage}
+          useNativeControls
+          resizeMode={ResizeMode.CONTAIN}
+          isLooping
+        />
+      ) : (
+        <Image source={{ uri }} style={styles.previewImage} resizeMode="contain" />
+      )}
       <IconButton icon="close" size={30} onPress={() => navigation.goBack()} style={styles.closeButton} />
 
       <View style={styles.contentContainer}>
@@ -147,7 +162,7 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '50%',
-    resizeMode: 'contain',
+    backgroundColor: 'black',
   },
   closeButton: {
     position: 'absolute',

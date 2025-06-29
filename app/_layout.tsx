@@ -65,7 +65,11 @@ export default function RootLayout() {
 
   if (!loaded) {
     // Also show the splash screen while fonts are loading.
-    return <CustomSplashScreen />;
+    return (
+      <PaperProvider>
+        <CustomSplashScreen />
+      </PaperProvider>
+    );
   }
 
   return <RootLayoutNav />;

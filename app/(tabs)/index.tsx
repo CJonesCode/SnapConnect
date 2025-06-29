@@ -11,6 +11,7 @@ import {
   PermissionStatus,
 } from 'expo-camera';
 import { useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import {
   Button,
   Text,
@@ -19,16 +20,30 @@ import {
   IconButton,
 } from 'react-native-paper';
 import { logger } from '../../services/logging/logger';
+import { useCameraStore } from '@/hooks/useCameraStore';
 
 export default function CameraScreen() {
   logger.info('--- CameraScreen: Component rendering ---');
 
   const [permission, requestPermission] = useCameraPermissions();
-  const [facing, setFacing] = useState<'front' | 'back'>('back');
+  const [cameraReady, setCameraReady] = useState(false);
+  const [isNavReady, setIsNavReady] = useState(false);
+  const {
+    facing,
+    toggleFacing,
+    flash,
+    toggleFlash,
+    isRecording,
+    setIsRecording,
+    setPhotoUri,
+    setVideoUri,
+  } = useCameraStore();
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
   const theme = useTheme();
-  const isCameraActive = permission?.status === PermissionStatus.GRANTED;
+  const isFocused = useIsFocused();
+  const isCameraActive = isNavReady && isFocused && permission?.status === PermissionStatus.GRANTED;
+  const controlsDisabled = !cameraReady || isRecording;
 
   logger.info(`Permission status: ${permission?.status}`);
 
@@ -40,6 +55,12 @@ export default function CameraScreen() {
       requestPermission();
     }
   }, [permission, requestPermission]);
+
+  // Add this effect to delay camera rendering
+  useEffect(() => {
+    // This runs after the initial render, ensuring navigation is ready.
+    setIsNavReady(true);
+  }, []);
 
   function handleRequestPermission() {
     logger.info('handleRequestPermission: Requesting camera permission...');
@@ -108,21 +129,18 @@ export default function CameraScreen() {
     );
   }
 
-  function toggleCameraFacing() {
-    logger.info(`toggleCameraFacing: Current facing: ${facing}. Toggling...`);
-    setFacing((current) => (current === 'back' ? 'front' : 'back'));
-  }
-
   async function takePicture() {
+    if (isRecording) return;
     logger.info('takePicture: Attempting to take picture...');
     if (cameraRef.current) {
       logger.info('takePicture: Camera ref is available.');
       try {
         const photo = await cameraRef.current.takePictureAsync();
         logger.info(`takePicture: Success. Photo URI: ${photo.uri}`);
+        setPhotoUri(photo.uri);
         router.push({
           pathname: '/modal',
-          params: { uri: photo.uri },
+          params: { uri: photo.uri, type: 'photo' },
         });
       } catch (error) {
         logger.error('takePicture: Failed to take picture', { error });
@@ -132,35 +150,88 @@ export default function CameraScreen() {
     }
   }
 
+  async function recordVideo() {
+    logger.info('recordVideo: Long press detected, starting recording...');
+    if (cameraRef.current) {
+      setIsRecording(true);
+      try {
+        const video = await cameraRef.current.recordAsync();
+        if (video) {
+          logger.info(`recordVideo: Success. Video URI: ${video.uri}`);
+          setVideoUri(video.uri);
+          router.push({
+            pathname: '/modal',
+            params: { uri: video.uri, type: 'video' },
+          });
+        } else {
+          logger.warn('recordVideo: Recording returned no video object.');
+        }
+      } catch (error) {
+        logger.error('recordVideo: Failed to record video', { error });
+      } finally {
+        setIsRecording(false);
+      }
+    } else {
+      logger.warn('recordVideo: Camera ref is not available.');
+    }
+  }
+
+  function stopVideoRecording() {
+    logger.info('stopVideoRecording: Press out detected, stopping recording...');
+    if (cameraRef.current && isRecording) {
+      cameraRef.current.stopRecording();
+    }
+  }
+
   logger.info('Render state: Rendering CameraView');
   return (
     <View style={styles.container}>
       <CameraView
         style={styles.camera}
         facing={facing}
+        flash={flash}
         ref={cameraRef}
         active={isCameraActive}
-        onCameraReady={() => logger.info('EVENT: onCameraReady fired!')}
+        onCameraReady={() => {
+          logger.info('EVENT: onCameraReady fired!');
+          setCameraReady(true);
+        }}
         onMountError={(e) =>
           logger.error('Camera mount error', { message: e.message })
         }
       />
-      <View style={styles.controlsContainer}>
+      <View style={styles.topBar}>
+        <IconButton
+          icon={flash === 'on' ? 'flash' : 'flash-off'}
+          iconColor="white"
+          size={28}
+          onPress={toggleFlash}
+          disabled={controlsDisabled}
+        />
         <IconButton
           icon="camera-flip"
           iconColor="white"
-          size={34}
-          onPress={toggleCameraFacing}
-          style={styles.flipButton}
+          size={28}
+          onPress={toggleFacing}
+          disabled={controlsDisabled}
         />
-        <View style={styles.shutterButtonOuter}>
+      </View>
+      <View style={styles.bottomBar}>
+        <View
+          style={[
+            styles.shutterButtonOuter,
+            isRecording && styles.shutterButtonRecording,
+          ]}
+        >
           <IconButton
             icon="camera"
             iconColor="white"
             size={40}
             onPress={takePicture}
+            onLongPress={recordVideo}
+            onPressOut={stopVideoRecording}
             style={styles.shutterButtonInner}
-            disabled={!permission.granted}
+            disabled={controlsDisabled}
           />
         </View>
       </View>
@@ -183,25 +254,27 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    backgroundColor: 'black',
   },
   camera: {
     flex: 1,
   },
-  controlsContainer: {
+  topBar: {
     position: 'absolute',
-    bottom: 0,
+    top: 50,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  bottomBar: {
+    position: 'absolute',
+    bottom: 50,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    backgroundColor: 'transparent',
     justifyContent: 'center',
-    alignItems: 'flex-end',
-    marginBottom: 30,
-  },
-  flipButton: {
-    position: 'absolute',
-    right: 20,
-    bottom: 10,
+    alignItems: 'center',
   },
   shutterButtonOuter: {
     width: 80,
@@ -211,6 +284,10 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  shutterButtonRecording: {
+    borderColor: 'red',
+    backgroundColor: 'red',
   },
   shutterButtonInner: {
     width: 70,

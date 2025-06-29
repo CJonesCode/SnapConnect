@@ -24,6 +24,7 @@ import {
   useTheme,
   HelperText,
 } from 'react-native-paper';
+import { AppAssets } from '@/constants/Assets';
 
 // Define the shape of the form data for type safety and validation
 export type SignUpCredentials = z.infer<typeof validationSchema>;
@@ -127,7 +128,7 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <Image
-          source={require('../../assets/images/logo.png')}
+          source={AppAssets.logo}
           style={styles.logo}
         />
         <Text variant="headlineMedium" style={styles.title}>

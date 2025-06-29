@@ -3,6 +3,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
 import { Pressable, Image, StyleSheet } from 'react-native';
 import { useTheme } from 'react-native-paper';
+import { AppAssets } from '@/constants/Assets';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -32,7 +33,7 @@ export default function TabLayout() {
         headerTitleAlign: 'center',
         headerLeft: () => (
           <Image
-            source={require('../../assets/images/logo.png')}
+            source={AppAssets.logo}
             style={styles.headerLogo}
           />
         ),

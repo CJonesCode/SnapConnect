@@ -10,7 +10,7 @@ import { Avatar, Button, Text, Divider, useTheme, TextInput, IconButton, Dialog,
 import { useAuth } from '@/hooks/useAuth';
 import { useUserStore } from '@/hooks/useUserStore';
 import { logger } from '@/services/logging/logger';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { updateUserProfile } from '@/services/firebase/userService';
 
 export default function AccountScreen() {
@@ -107,10 +107,12 @@ export default function AccountScreen() {
                 style={styles.input}
                 dense
                 maxLength={24}
-                textAlign="center"
               />
             ) : (
-              <Text variant="headlineSmall" style={styles.displayName}>{profile.displayName || 'Not set'}</Text>
+              <>
+                <View style={styles.buttonSpacer} />
+                <Text variant="headlineSmall" style={styles.displayName}>{profile.displayName || 'Not set'}</Text>
+              </>
             )}
             <IconButton
               icon={isEditing ? 'check' : 'pencil'}
@@ -219,7 +221,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
     width: '100%',
   },
   displayName: {
@@ -234,14 +235,18 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: 'transparent',
+    textAlign: 'center',
     minWidth: '60%',
     height: 48, // To match Text height roughly
   },
   editButton: {
-    position: 'absolute',
-    right: 0,
-    top: '50%',
-    transform: [{ translateY: -24 }], // Half of IconButton size (48)
+    margin: 0,
+    width: 48,
+    height: 48,
+  },
+  buttonSpacer: {
+    width: 48, // Match the button width
+    height: 48,
   },
   button: {
     width: '100%',

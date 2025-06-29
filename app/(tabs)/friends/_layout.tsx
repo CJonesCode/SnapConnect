@@ -4,7 +4,7 @@ import React from 'react';
 
 export default function FriendsLayout() {
   return (
-    <Stack>
+    <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen
         name="index"
         options={{
