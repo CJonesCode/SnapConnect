@@ -1,44 +1,43 @@
-import { View, Image, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet, Text } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
-import { Text, useTheme, Surface } from 'react-native-paper';
 
 export default function TipScreen() {
   const tip = useLocalSearchParams();
-  const theme = useTheme();
 
   // The 'viewed' param is a string, so we convert it back to a boolean
   const isViewed = tip.viewed === 'true';
 
   if (!tip.id) {
     return (
-      <Surface style={styles.container}>
-        <Text variant="titleLarge">Tip not found!</Text>
-      </Surface>
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Tip not found!</Text>
+      </View>
     );
   }
 
   return (
-    <Surface style={styles.container}>
-      <Image source={{ uri: tip.mediaUrl as string }} style={styles.image} resizeMode="contain" />
+    <View style={styles.container}>
+      <Image source={{ uri: tip.mediaUrl as string }} style={styles.image} />
       <View style={styles.overlay}>
-        <Text variant="headlineLarge" style={styles.tickerText}>${tip.ticker}</Text>
-        <Text variant="bodyMedium" style={styles.fromText}>from @{tip.from}</Text>
-        <Text variant="titleMedium" style={styles.tipText}>{tip.tip}</Text>
+        <Text style={styles.ticker}>${tip.ticker}</Text>
+        <Text style={styles.from}>from @{tip.from}</Text>
+        <Text style={styles.tipText}>{tip.tip}</Text>
       </View>
-    </Surface>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'black',
   },
   image: {
     width: '100%',
     height: '100%',
+    resizeMode: 'contain',
   },
   overlay: {
     position: 'absolute',
@@ -48,16 +47,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
     padding: 20,
   },
-  tickerText: {
-    color: 'white',
+  ticker: {
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#fff',
   },
-  fromText: {
-    color: '#E0E0E0', // Lighter gray for subtitle
+  from: {
+    fontSize: 16,
     fontStyle: 'italic',
+    color: '#ccc',
     marginBottom: 10,
   },
   tipText: {
-    color: 'white',
+    fontSize: 18,
+    color: '#fff',
+  },
+  errorText: {
+    color: '#fff',
+    fontSize: 18,
   },
 }); 
