@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/services/logging/logger';
 import { SplashScreen as CustomSplashScreen } from '@/components/SplashScreen';
 import { AuthGuard } from '@/components/AuthGuard';
+import { NotificationManager } from '@/components/NotificationManager';
 import { PaperProvider, useTheme } from 'react-native-paper';
 
 export {
@@ -42,6 +43,7 @@ function RootLayoutNav() {
   return (
     <PaperProvider>
       <AuthGuard>
+        <NotificationManager />
         <Stack
           screenOptions={{
             headerStyle: {

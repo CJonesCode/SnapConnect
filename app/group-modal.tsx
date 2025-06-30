@@ -5,6 +5,9 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import {
   Button,
@@ -81,41 +84,58 @@ export default function GroupModal() {
 
   return (
     <SafeAreaView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
     >
-      <TextInput
-        label="Group Name"
-        value={groupName}
-        onChangeText={setGroupName}
-        style={styles.input}
-      />
-      <Text variant="titleMedium" style={styles.header}>
-        Select Friends
-      </Text>
-      <FlatList
-        data={friends}
-        renderItem={renderFriendItem}
-        keyExtractor={(item) => item.uid}
-        style={styles.list}
-      />
-      <Button
-        mode="contained"
-        onPress={handleCreateGroup}
-        style={styles.button}
-        disabled={
-          !groupName.trim() || selectedFriends.length === 0 || isCreating
-        }
-        loading={isCreating}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
       >
-        Create Group
-      </Button>
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <TextInput
+            label="Group Name"
+            value={groupName}
+            onChangeText={setGroupName}
+            style={styles.input}
+          />
+          <Text variant="titleMedium" style={styles.header}>
+            Select Friends
+          </Text>
+          <FlatList
+            data={friends}
+            renderItem={renderFriendItem}
+            keyExtractor={(item) => item.uid}
+            style={styles.list}
+            scrollEnabled={false}
+          />
+          <Button
+            mode="contained"
+            onPress={handleCreateGroup}
+            style={styles.button}
+            disabled={
+              !groupName.trim() || selectedFriends.length === 0 || isCreating
+            }
+            loading={isCreating}
+          >
+            Create Group
+          </Button>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     padding: 16,
   },
   input: {

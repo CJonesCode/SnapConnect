@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, FlatList, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import {
   searchUsers,
   UserProfile,
@@ -11,6 +11,7 @@ import {
   subscribeToFriends,
   getUserProfile,
 } from '@/services/firebase/userService';
+import { showLocalNotification } from '@/services/notificationService';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserStore } from '@/hooks/useUserStore';
 import { useRouter } from 'expo-router';
@@ -41,12 +42,61 @@ export default function FriendsScreen() {
     null,
   );
   const theme = useTheme();
+  
+  // Track previous friend requests to detect new ones for notifications
+  const previousRequestsRef = useRef<Friendship[]>([]);
+  const isInitialLoadRef = useRef(true);
 
-  // Effect to subscribe to friend requests
+  // Effect to subscribe to friend requests and detect new ones for notifications
   useEffect(() => {
     if (!user) return;
-    const unsubscribe = subscribeToFriendRequests(user.uid, setFriendRequests);
-    return () => unsubscribe();
+    
+    const unsubscribe = subscribeToFriendRequests(user.uid, async (newRequests) => {
+      // Update the state
+      setFriendRequests(newRequests);
+      
+      // Skip notification on initial load
+      if (isInitialLoadRef.current) {
+        previousRequestsRef.current = newRequests;
+        isInitialLoadRef.current = false;
+        return;
+      }
+      
+      // Check for truly new requests by comparing with previous requests
+      const previousRequestIds = new Set(previousRequestsRef.current.map(req => req.id));
+      const newRequestsToNotify = newRequests.filter(req => !previousRequestIds.has(req.id));
+      
+      // Show notifications for each new request
+      for (const request of newRequestsToNotify) {
+        try {
+          // Get sender profile for the notification
+          const senderProfile = await getUserProfile(request.requestedBy);
+          const senderName = senderProfile?.displayName || 'Someone';
+          
+          await showLocalNotification(
+            'New Friend Request! 👋',
+            `${senderName} sent you a friend request`,
+            {
+              type: 'friend_request',
+              friendshipId: request.id,
+              requestedBy: request.requestedBy,
+            }
+          );
+        } catch (error) {
+          console.error('Error showing friend request notification:', error);
+        }
+      }
+      
+      // Update the previous requests reference
+      previousRequestsRef.current = newRequests;
+    });
+    
+    return () => {
+      unsubscribe();
+      // Reset refs when component unmounts or user changes
+      isInitialLoadRef.current = true;
+      previousRequestsRef.current = [];
+    };
   }, [user]);
 
   // Effect to subscribe to friends list
@@ -277,75 +327,87 @@ export default function FriendsScreen() {
   };
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={[styles.keyboardAvoidingView, { backgroundColor: theme.colors.background }]}
     >
-      <Text variant="headlineSmall" style={styles.subHeader}>
-        My Friends
-      </Text>
-      {friends.length > 0 ? (
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text variant="headlineSmall" style={styles.subHeader}>
+          My Friends
+        </Text>
+        {friends.length > 0 ? (
+          <FlatList
+            data={friends}
+            renderItem={renderFriendItem}
+            keyExtractor={(item) => item.uid}
+            style={styles.list}
+            scrollEnabled={false}
+          />
+        ) : (
+          <Text style={styles.placeholderText}>Your friends list is empty.</Text>
+        )}
+        <Divider style={styles.divider} />
+
+        {friendRequests.length > 0 && (
+          <>
+            <Text variant="headlineSmall" style={styles.subHeader}>
+              Friend Requests
+            </Text>
+            <FlatList
+              data={friendRequests}
+              renderItem={renderRequestItem}
+              keyExtractor={(item) => item.id}
+              style={styles.list}
+              scrollEnabled={false}
+            />
+            <Divider style={styles.divider} />
+          </>
+        )}
+        <Text variant="headlineLarge" style={styles.title}>
+          Find Friends
+        </Text>
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.input}
+            placeholder="Search by username..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+          />
+          <Button
+            mode="contained"
+            onPress={handleSearch}
+            disabled={isLoading}
+            loading={isLoading}
+            style={styles.searchButton}
+          >
+            Search
+          </Button>
+        </View>
+
         <FlatList
-          data={friends}
-          renderItem={renderFriendItem}
+          data={searchResults}
+          renderItem={renderUserItem}
           keyExtractor={(item) => item.uid}
           style={styles.list}
+          scrollEnabled={false}
         />
-      ) : (
-        <Text style={styles.placeholderText}>Your friends list is empty.</Text>
-      )}
-      <Divider style={styles.divider} />
-
-      {friendRequests.length > 0 && (
-        <>
-          <Text variant="headlineSmall" style={styles.subHeader}>
-            Friend Requests
-          </Text>
-          <FlatList
-            data={friendRequests}
-            renderItem={renderRequestItem}
-            keyExtractor={(item) => item.id}
-            style={styles.list}
-          />
-          <Divider style={styles.divider} />
-        </>
-      )}
-      <Text variant="headlineLarge" style={styles.title}>
-        Find Friends
-      </Text>
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Search by username..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCapitalize="none"
-          returnKeyType="search"
-          onSubmitEditing={handleSearch}
-        />
-        <Button
-          mode="contained"
-          onPress={handleSearch}
-          disabled={isLoading}
-          loading={isLoading}
-          style={styles.searchButton}
-        >
-          Search
-        </Button>
-      </View>
-
-      <FlatList
-        data={searchResults}
-        renderItem={renderUserItem}
-        keyExtractor={(item) => item.uid}
-        style={styles.list}
-      />
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  keyboardAvoidingView: {
     flex: 1,
+  },
+  container: {
+    flexGrow: 1,
     padding: 20,
   },
   title: {

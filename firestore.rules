@@ -17,7 +17,8 @@ service cloud.firestore {
                data.photoURL is string &&
                data.friends is list &&
                data.createdAt is timestamp &&
-               data.keys().hasOnly(['uid', 'username', 'displayName', 'displayName_lowercase', 'email', 'photoURL', 'friends', 'createdAt']);
+               (!('expoPushToken' in data) || data.expoPushToken == null || data.expoPushToken is string) &&
+               data.keys().hasOnly(['uid', 'username', 'displayName', 'displayName_lowercase', 'email', 'photoURL', 'friends', 'createdAt', 'expoPushToken']);
       }
 
       allow create: if request.auth != null &&
@@ -51,11 +52,57 @@ service cloud.firestore {
       allow read, update, delete: if request.auth != null && request.auth.uid in resource.data.members;
     }
 
-    // --- Tips Collection ---
+    // --- Tips Collection (Enhanced Security) ---
     match /tips/{tipId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null && resource.data.recipientId == request.auth.uid;
-      allow update: if request.auth != null && resource.data.recipientId == request.auth.uid;
+      // Enhanced validation function for tip documents
+      function isTipSchema(data) {
+        return data.keys().hasAll(['senderId', 'recipientId', 'mediaUrl', 'viewed', 'createdAt', 'expiresAt']) &&
+               data.senderId is string &&
+               data.recipientId is string &&
+               data.mediaUrl is string &&
+               data.viewed is bool &&
+               data.createdAt is timestamp &&
+               data.expiresAt is timestamp &&
+               (!('ticker' in data) || data.ticker is string) &&
+               (!('tip' in data) || data.tip is string) &&
+               (!('isSignal' in data) || data.isSignal is bool) &&
+               data.keys().hasOnly(['senderId', 'recipientId', 'mediaUrl', 'ticker', 'tip', 'viewed', 'isSignal', 'createdAt', 'expiresAt']);
+      }
+
+      // Check if two users are friends
+      function areFriends(userId1, userId2) {
+        let friendshipId1 = userId1 + '_' + userId2;
+        let friendshipId2 = userId2 + '_' + userId1;
+        return exists(/databases/$(database)/documents/friendships/$(friendshipId1)) ||
+               exists(/databases/$(database)/documents/friendships/$(friendshipId2));
+      }
+
+      // Read permissions: only sender and recipient can read tips
+      allow read: if request.auth != null && 
+                     resource.data.expiresAt > request.time && (
+                       resource.data.senderId == request.auth.uid ||
+                       resource.data.recipientId == request.auth.uid
+                     );
+
+      // Create permissions: only authenticated users can create tips they're sending
+      allow create: if request.auth != null &&
+                       request.auth.uid == request.resource.data.senderId &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.expiresAt > request.time &&
+                       request.resource.data.viewed == false &&
+                       isTipSchema(request.resource.data) &&
+                       // Ensure sender and recipient are friends (except for signals)
+                       (request.resource.data.isSignal == true || areFriends(request.auth.uid, request.resource.data.recipientId));
+
+      // Update permissions: only recipients can mark as viewed, only senders can delete
+      allow update: if request.auth != null &&
+                       resource.data.recipientId == request.auth.uid &&
+                       request.resource.data.viewed == true &&
+                       // Only allow changing viewed status, nothing else
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']);
+
+      // Delete permissions: only sender can delete their own tips
+      allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
     }
 
     // --- Signals Collection ---

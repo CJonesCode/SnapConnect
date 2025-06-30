@@ -17,6 +17,7 @@ export interface Tip {
   ticker?: string; // Optional: The stock symbol being discussed
   tip?: string; // Optional: A short text description or analysis
   viewed: boolean;
+  isSignal?: boolean; // Optional: true if this tip was sent as a signal (broadcast)
   createdAt: any;
   expiresAt: any;
 }
@@ -95,5 +96,55 @@ export async function markTipAsViewed(tipId: string): Promise<void> {
   } catch (error) {
     logger.error('Error marking tip as viewed:', { tipId, error });
     throw new Error('Failed to mark tip as viewed.');
+  }
+}
+
+/**
+ * Creates a signal (broadcast tip) sent to all friends of the user.
+ * This creates individual tip documents for each friend.
+ * @param senderId The UID of the user sending the signal.
+ * @param friendIds Array of friend UIDs to send the signal to.
+ * @param mediaUrl The URL of the uploaded media for the signal.
+ * @param data Optional data including a stock ticker and a text tip.
+ * @returns Promise that resolves when all tips are created.
+ */
+export async function createSignalTip(
+  senderId: string,
+  friendIds: string[],
+  mediaUrl: string,
+  data?: { ticker?: string; tip?: string }
+): Promise<void> {
+  try {
+    if (friendIds.length === 0) {
+      throw new Error('No friends to send signal to.');
+    }
+
+    const expiryDate = new Date();
+    expiryDate.setHours(expiryDate.getHours() + 24); // Expires in 24 hours
+
+    // Create individual tip documents for each friend
+    const tipPromises = friendIds.map(friendId => 
+      addDoc(collection(db, 'tips'), {
+        senderId,
+        recipientId: friendId,
+        mediaUrl,
+        ticker: data?.ticker || '',
+        tip: data?.tip || '',
+        viewed: false,
+        isSignal: true, // Mark as signal to distinguish from regular tips
+        createdAt: serverTimestamp(),
+        expiresAt: expiryDate,
+      })
+    );
+
+    await Promise.all(tipPromises);
+    logger.info('Signal tip created and sent to all friends', { 
+      senderId, 
+      friendCount: friendIds.length,
+      ticker: data?.ticker 
+    });
+  } catch (error) {
+    logger.error('Error creating signal tip:', { error });
+    throw new Error('Failed to create signal tip.');
   }
 } 

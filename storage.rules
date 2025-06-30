@@ -2,22 +2,31 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Media for Tips
+    // --- Enhanced Tips Media Storage ---
     match /tips/{userId}/{allPaths=**} {
-      // Only the authenticated user can upload to their own path.
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Only the authenticated user can upload to their own path
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      request.resource.size < 10 * 1024 * 1024 && // 10MB limit
+                      request.resource.contentType.matches('image/.*|video/.*'); // Only images and videos
     }
 
-    // Media for Signals
+    // --- Signals Media Storage ---
     match /signals/{userId}/{allPaths=**} {
-      // Only the authenticated user can upload to their own path.
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Only the authenticated user can upload to their own path
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      request.resource.size < 10 * 1024 * 1024 && // 10MB limit
+                      request.resource.contentType.matches('image/.*|video/.*'); // Only images and videos
     }
     
-    // Default Read Access: Allow any authenticated user to read all files.
+    // --- Default Read Access ---
+    // Allow any authenticated user to read all files.
     // This is secure because the URLs are stored in Firestore, which has its
     // own strict access controls. A user can't get a file URL unless they
     // have permission to read the corresponding Firestore document.
+    // For enhanced security in production, consider serving media through Cloud Functions
+    // with permission checks, but this provides good security for most use cases.
     match /{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if false; // Deny all other writes explicitly

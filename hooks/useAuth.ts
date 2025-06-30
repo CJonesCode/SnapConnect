@@ -19,10 +19,12 @@ import { auth, db } from '@/services/firebase/firebaseConfig';
 import { logger } from '@/services/logging/logger';
 import { cleanupAllListeners } from '@/services/firebase/listenerManager';
 import { useUserStore, UserProfile } from './useUserStore';
-import {
-  savePushToken,
-} from '@/services/firebase/userService';
 import { SignUpCredentials } from '@/app/(auth)';
+import { 
+  registerForPushNotifications, 
+  unregisterPushNotifications,
+  setupNotificationListeners 
+} from '@/services/notificationService';
 
 // --- Type Definitions ---
 export type AuthState = {
@@ -31,9 +33,7 @@ export type AuthState = {
   error: string | null;
   isInitialized: boolean;
   isAuthenticated: boolean;
-  pushToken: string | null;
   init: () => () => void; // The init function returns an unsubscribe function
-  setPushToken: (token: string) => void;
 };
 
 // --- Global Auth Listener ---
@@ -46,17 +46,6 @@ const useAuthStore = create<AuthState>((set, get) => ({
   error: null,
   isInitialized: false,
   isAuthenticated: false,
-  pushToken: null,
-
-  setPushToken: (token: string) => {
-    set({ pushToken: token });
-    const user = get().user;
-    if (user && token) {
-      savePushToken(user.uid, token).catch((e) =>
-        logger.error('Failed to save push token after state update', e)
-      );
-    }
-  },
 
   init: () => {
     // Clean up any existing listener first
@@ -79,9 +68,11 @@ const useAuthStore = create<AuthState>((set, get) => ({
             useUserStore.setState({ profile: userData as UserProfile });
             logger.info(`Profile loaded for ${userData.displayName || user.uid}`);
 
-            const token = useAuthStore.getState().pushToken;
-            if (token) {
-              await savePushToken(user.uid, token);
+            // Register for push notifications on successful sign in
+            try {
+              await registerForPushNotifications(user.uid);
+            } catch (error) {
+              logger.warn('Failed to register for push notifications', { error });
             }
           } else {
             logger.warn(`User document not found for ${user.uid}`);
@@ -220,6 +211,15 @@ export function useAuth() {
     setError(null);
     try {
       logger.info('Starting logout process');
+      
+      // Unregister push notifications before signing out
+      if (authState.user) {
+        try {
+          await unregisterPushNotifications(authState.user.uid);
+        } catch (error) {
+          logger.warn('Failed to unregister push notifications', { error });
+        }
+      }
       
       // Clean up all Firestore listeners immediately
       cleanupAllListeners();

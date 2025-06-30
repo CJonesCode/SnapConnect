@@ -63,4 +63,9 @@ export default {
   experiments: {
     typedRoutes: true,
   },
+  extra: {
+    eas: {
+      projectId: process.env.EXPO_PUBLIC_PROJECT_ID
+    }
+  },
 };
