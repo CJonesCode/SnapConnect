@@ -1,11 +1,9 @@
 import React from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
-
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-import { useClientOnlyValue } from '@/hooks/useClientOnlyValue';
+import { Pressable, Image, StyleSheet } from 'react-native';
+import { useTheme } from 'react-native-paper';
+import { AppAssets } from '@/constants/Assets';
 
 // You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
 function TabBarIcon(props: {
@@ -16,16 +14,31 @@ function TabBarIcon(props: {
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const theme = useTheme();
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurface,
+        tabBarStyle: {
+          backgroundColor: theme.colors.elevation.level2,
+        },
+        headerStyle: {
+          backgroundColor: theme.colors.elevation.level2,
+        },
+        headerTitleStyle: {
+          color: theme.colors.onSurface,
+        },
+        headerTitleAlign: 'center',
+        headerLeft: () => (
+          <Image
+            source={AppAssets.logo}
+            style={styles.headerLogo}
+          />
+        ),
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
@@ -38,7 +51,7 @@ export default function TabLayout() {
                   <FontAwesome
                     name="info-circle"
                     size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
+                    color={theme.colors.onSurface}
                     style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
                   />
                 )}
@@ -50,10 +63,35 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: 'Chat',
-          tabBarIcon: ({ color }) => <TabBarIcon name="comment" color={color} />,
+          title: 'Signals',
+          tabBarIcon: ({ color }) => (
+            <TabBarIcon name="rss" color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="friends"
+        options={{
+          title: 'Friends',
+          tabBarIcon: ({ color }) => <TabBarIcon name="users" color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="account"
+        options={{
+          title: 'Account',
+          tabBarIcon: ({ color }) => <TabBarIcon name="cog" color={color} />,
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  headerLogo: {
+    width: 40,
+    height: 40,
+    marginLeft: 15,
+    resizeMode: 'contain',
+  },
+});

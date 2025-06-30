@@ -6,17 +6,15 @@ import { create } from 'zustand';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase/firebaseConfig';
 
-// --- TEMPORARY BYPASS ---
-const BYPASS_FIREBASE = true;
-// --- END TEMPORARY BYPASS ---
-
 /**
  * Represents the structure of a User document in Firestore.
  */
 export type UserProfile = {
   uid: string;
   email: string;
+  username: string;
   displayName: string;
+  displayName_lowercase: string;
   photoURL: string;
   friends: string[];
 };
@@ -36,21 +34,6 @@ export const useUserStore = create<UserState>((set) => ({
   fetchProfile: async (uid: string) => {
     set({ isLoading: true, error: null });
 
-    if (BYPASS_FIREBASE) {
-      console.log(`BYPASS: Fetching profile for UID: ${uid}`);
-      set({
-        profile: {
-          uid,
-          email: 'testuser@bypass.com',
-          displayName: 'Test User',
-          photoURL: '',
-          friends: ['FRIEND_1_UID', 'FRIEND_2_UID'],
-        },
-        isLoading: false,
-      });
-      return;
-    }
-
     try {
       const userRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userRef);
@@ -58,7 +41,8 @@ export const useUserStore = create<UserState>((set) => ({
       if (userSnap.exists()) {
         set({ profile: userSnap.data() as UserProfile, isLoading: false });
       } else {
-        throw new Error('User document not found.');
+        console.warn(`User document not found for UID: ${uid}. This may be expected during sign-up.`);
+        set({ profile: null, isLoading: false });
       }
     } catch (e) {
       set({ error: e as Error, isLoading: false });

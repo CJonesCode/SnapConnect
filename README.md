@@ -15,14 +15,20 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
 
 ## Features
 
-### Implemented (with Mock Data)
+### Implemented
+- **Firebase Integration**: Core services for auth, storage, and database are connected.
+- **Authentication**: Secure sign-in using Firebase Authentication.
+- **Friend System**: Users can add and manage friends.
+- **Tip Sending**: Users can send photo tips, which are uploaded to Firebase.
 - **Camera Interface**: Capture photos for use in tips.
+- **Friend Management**: Users can search for other users by name.
 - **Tip Viewing**: A chat-style list of incoming tips from other users.
-- **Ephemeral Logic**: Tips are marked as viewed and filtered from the list if they are expired.
+- **Ephemeral Logic**: Tips disappear after being viewed.
+- **Real-time Updates**: The app uses real-time listeners to update chat and friend lists.
+- **Centralized Logging**: A structured logging service is in place to monitor authentication and navigation events.
 
 ### Planned
-- **Full Firebase Integration**: Real-time sending, receiving, and storage of tips.
-- **Friend Management**: Ability to search, add, and manage friends.
+- **Full Friend Management**: Implement friend requests (add/accept), and display a friends list.
 - **Story System**: Post 24-hour ephemeral stories visible to friends.
 - **Group Chats**: Create and participate in group discussions.
 - **Push Notifications**: Real-time alerts for new tips and messages.
@@ -33,8 +39,7 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
 
 - Node.js (LTS version recommended)
 - Git
-- Genymotion (with VirtualBox)
-- Android Studio (for Android SDK tools)
+- An iOS simulator (via Xcode on macOS) or an Android emulator (via Android Studio).
 
 ### Installation
 
@@ -49,27 +54,50 @@ TheMarketIndex is a mobile-first social investing platform for sharing and discu
     npm install
     ```
 
-### Running with Genymotion
+3.  **Set up Environment Variables & Firebase Configuration:**
 
-To run the application on a Genymotion emulator, you need to ensure both Expo and Genymotion use the same Android SDK.
+    This project uses both a `.env` file for web/Expo Go development and native configuration files (`google-services.json` and `GoogleService-Info.plist`) for native builds.
 
-1.  **Configure Android SDK**:
-    - Open Android Studio and go to `Settings` > `Languages & Frameworks` > `Android SDK`.
-    - Note the **Android SDK Location**. You will need this path.
+    - **Create the `.env` file:**
+      - Copy the example file:
+        ```bash
+        cp .env.example .env
+        ```
+      - Open the new `.env` file and populate it with your Firebase project's web app credentials. You can find these in your **Firebase project settings > General > Your apps > Web app**.
 
-2.  **Configure Genymotion**:
-    - Open Genymotion and go to `Settings` > `ADB`.
-    - Select "Use custom Android SDK tools".
-    - Set the SDK path to the **Android SDK Location** you noted from Android Studio.
+        ```
+        EXPO_PUBLIC_FIREBASE_API_KEY=""
+        EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=""
+        EXPO_PUBLIC_FIREBASE_PROJECT_ID=""
+        EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=""
+        EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=""
+        EXPO_PUBLIC_FIREBASE_IOS_APP_ID=""
+        EXPO_PUBLIC_FIREBASE_ANDROID_APP_ID=""
+        EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID=""
+        ```
 
-3.  **Start the Emulator**:
-    - In Genymotion, start your desired virtual device.
+    - **Download Native Firebase Configuration:**
+      - Make sure you have the [Firebase CLI](https://firebase.google.com/docs/cli) installed and are logged in (`firebase login`).
+      - Run the following commands to download the native configuration files. Replace `<app-id>` with your actual Firebase App ID for iOS and Android respectively.
 
-4.  **Run the App**:
-    - In your project's root directory, start the Expo development server:
-      ```bash
-      npm start
-      ```
-    - In the terminal where the server is running, press `a` to open the app on your running Android emulator.
+        *For iOS:*
+        ```bash
+        firebase apps:sdkconfig -i <app-id> -o GoogleService-Info.plist
+        ```
+        *For Android:*
+        ```bash
+        firebase apps:sdkconfig -a <app-id> -o google-services.json
+        ```
+
+### Running the Application
+
+1.  **Start the development server:**
+    ```bash
+    npm start
+    ```
+
+2.  **Open the app:**
+    - **On an Android Emulator:** With the emulator running, press `a` in the terminal where the server is running.
+    - **On an iOS Simulator:** With the simulator running, press `i` in the terminal where the server is running.
 
 This will install the Expo Go app on your Genymotion device and run TheMarketIndex. 

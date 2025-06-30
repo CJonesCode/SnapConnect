@@ -1,34 +1,125 @@
-/**
- * These rules are for the Firestore database. They are designed to be secure,
- * ensuring that users can only read and write their own data, and interact
- * with snaps and other collections in a controlled manner.
- */
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can read and update their own user document.
-    // They cannot create or delete their own user document directly.
-    // User documents are created server-side (in our case, via the useAuth hook) upon sign-up.
+    // --- Users Collection ---
+    // User documents store public profiles and friend lists.
+    // The `username` is a permanent, lowercase identifier derived from the user's email.
+    // The `displayName` is a separate, user-customizable name.
     match /users/{userId} {
-      allow read, update: if request.auth != null && request.auth.uid == userId;
+      // isUserSchema validates the document structure on create and update.
+      function isUserSchema(data) {
+        return data.uid == userId &&
+               data.username is string &&
+               data.displayName is string &&
+               data.displayName_lowercase is string &&
+               data.email is string &&
+               data.photoURL is string &&
+               data.friends is list &&
+               data.createdAt is timestamp &&
+               (!('expoPushToken' in data) || data.expoPushToken == null || data.expoPushToken is string) &&
+               data.keys().hasOnly(['uid', 'username', 'displayName', 'displayName_lowercase', 'email', 'photoURL', 'friends', 'createdAt', 'expoPushToken']);
+      }
+
+      allow create: if request.auth != null &&
+                       request.auth.uid == userId &&
+                       isUserSchema(request.resource.data);
+
+      allow read: if request.auth != null;
+
+      allow update: if request.auth != null &&
+                       request.auth.uid == userId &&
+                       isUserSchema(request.resource.data);
+
+      allow delete: if false;
     }
 
-    // Snaps can be created by any authenticated user.
-    // Users can only read snaps sent to them.
-    // Users can only delete snaps they have sent.
-    // Snaps cannot be updated (they are immutable after sending).
-    match /snaps/{snapId} {
+    // --- Usernames Collection ---
+    // This collection is used to enforce unique usernames across the application.
+    // A document is created here in a transaction when a user signs up.
+    match /usernames/{username} {
       allow create: if request.auth != null;
-      allow read: if request.auth != null && resource.data.recipientId == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
-      allow update: if false;
+      allow read: if true; // Publicly readable to check for availability
+      allow update, delete: if false; // Cannot be changed by clients
     }
 
-    // A placeholder for future collections like stories and groups.
-    // By default, all other collections are locked down.
-    match /{document=**} {
-      allow read, write: if false;
+    // --- Friendships Collection ---
+    match /friendships/{friendshipId} {
+      // A user can create a friendship document if they are one of the members.
+      allow create: if request.auth != null && request.auth.uid in request.resource.data.members;
+
+      // A user can read, update, or delete a friendship document if they are a member.
+      allow read, update, delete: if request.auth != null && request.auth.uid in resource.data.members;
+    }
+
+    // --- Tips Collection (Enhanced Security) ---
+    match /tips/{tipId} {
+      // Enhanced validation function for tip documents
+      function isTipSchema(data) {
+        return data.keys().hasAll(['senderId', 'recipientId', 'mediaUrl', 'viewed', 'createdAt', 'expiresAt']) &&
+               data.senderId is string &&
+               data.recipientId is string &&
+               data.mediaUrl is string &&
+               data.viewed is bool &&
+               data.createdAt is timestamp &&
+               data.expiresAt is timestamp &&
+               (!('ticker' in data) || data.ticker is string) &&
+               (!('tip' in data) || data.tip is string) &&
+               (!('isSignal' in data) || data.isSignal is bool) &&
+               data.keys().hasOnly(['senderId', 'recipientId', 'mediaUrl', 'ticker', 'tip', 'viewed', 'isSignal', 'createdAt', 'expiresAt']);
+      }
+
+      // Check if two users are friends
+      function areFriends(userId1, userId2) {
+        let friendshipId1 = userId1 + '_' + userId2;
+        let friendshipId2 = userId2 + '_' + userId1;
+        return exists(/databases/$(database)/documents/friendships/$(friendshipId1)) ||
+               exists(/databases/$(database)/documents/friendships/$(friendshipId2));
+      }
+
+      // Read permissions: only sender and recipient can read tips
+      allow read: if request.auth != null && 
+                     resource.data.expiresAt > request.time && (
+                       resource.data.senderId == request.auth.uid ||
+                       resource.data.recipientId == request.auth.uid
+                     );
+
+      // Create permissions: only authenticated users can create tips they're sending
+      allow create: if request.auth != null &&
+                       request.auth.uid == request.resource.data.senderId &&
+                       request.resource.data.createdAt == request.time &&
+                       request.resource.data.expiresAt > request.time &&
+                       request.resource.data.viewed == false &&
+                       isTipSchema(request.resource.data) &&
+                       // Ensure sender and recipient are friends (except for signals)
+                       (request.resource.data.isSignal == true || areFriends(request.auth.uid, request.resource.data.recipientId));
+
+      // Update permissions: only recipients can mark as viewed, only senders can delete
+      allow update: if request.auth != null &&
+                       resource.data.recipientId == request.auth.uid &&
+                       request.resource.data.viewed == true &&
+                       // Only allow changing viewed status, nothing else
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewed']);
+
+      // Delete permissions: only sender can delete their own tips
+      allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
+    }
+
+    // --- Signals Collection ---
+    match /signals/{signalId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+
+    // --- Groups Collection ---
+    match /groups/{groupId} {
+      allow create: if request.auth != null;
+      allow read, update: if request.auth != null && resource.data.members.hasAny([request.auth.uid]);
+      
+      // Messages Subcollection
+      match /messages/{messageId} {
+        allow read, create: if request.auth != null && get(/databases/$(database)/documents/groups/$(groupId)).data.members.hasAny([request.auth.uid]);
+      }
     }
   }
-} 
+}

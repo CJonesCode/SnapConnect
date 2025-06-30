@@ -1,13 +1,15 @@
-import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import 'react-native-reanimated';
-
-import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/services/logging/logger';
+import { SplashScreen as CustomSplashScreen } from '@/components/SplashScreen';
+import { AuthGuard } from '@/components/AuthGuard';
+import { NotificationManager } from '@/components/NotificationManager';
+import { PaperProvider, useTheme } from 'react-native-paper';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -16,22 +18,69 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: undefined, // Let AuthGuard handle initial routing
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutNav() {
-  const colorScheme = useColorScheme();
+  const { isInitialized } = useAuth();
+  const theme = useTheme();
+
+  useEffect(() => {
+    if (isInitialized) {
+      SplashScreen.hideAsync();
+      logger.info('Splash screen hidden');
+    }
+  }, [isInitialized]);
+
+  if (!isInitialized) {
+    // While determining auth state, show our custom splash screen.
+    return <CustomSplashScreen />;
+  }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <PaperProvider>
+      <AuthGuard>
+        <NotificationManager />
+        <Stack
+          screenOptions={{
+            headerStyle: {
+              backgroundColor: '#2c2830', // React Native Paper elevation.level2 color
+            },
+            headerTitleStyle: {
+              color: '#e7e1e5', // React Native Paper onSurface color
+            },
+            headerTintColor: '#e7e1e5', // React Native Paper onSurface color
+          }}
+        >
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen 
+            name="modal" 
+            options={{ 
+              presentation: 'modal',
+              title: 'Create Tip',
+            }} 
+          />
+          <Stack.Screen 
+            name="user-profile" 
+            options={{
+              title: 'User Profile',
+              headerBackTitle: 'Back',
+            }} 
+          />
+          <Stack.Screen 
+            name="group-modal" 
+            options={{
+              title: 'Create Group',
+              presentation: 'modal',
+            }} 
+          />
+        </Stack>
+      </AuthGuard>
+    </PaperProvider>
   );
 }
 
@@ -46,14 +95,13 @@ export default function RootLayout() {
     if (error) throw error;
   }, [error]);
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
   if (!loaded) {
-    return null;
+    // Also show the splash screen while fonts are loading.
+    return (
+      <PaperProvider>
+        <CustomSplashScreen />
+      </PaperProvider>
+    );
   }
 
   return <RootLayoutNav />;

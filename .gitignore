@@ -10,6 +10,8 @@ expo-env.d.ts
 dist/
 build/
 web-build/
+android/
+ios/
 
 # Native
 .kotlin/
@@ -26,6 +28,8 @@ web-build/
 # Firebase
 firebase-debug.log
 .firebaserc
+google-services.json
+GoogleService-Info.plist
 
 # Logs
 npm-debug.log*
@@ -36,11 +40,9 @@ yarn-error.log*
 yarn-error.*
 
 # Environment secrets
-.env
+# Ignore all local environment files, but not the example
 .env*
-.env*.local
-.env.production
-.env.development
+!/.env.example
 
 # IDEs
 .vscode/
